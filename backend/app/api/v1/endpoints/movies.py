@@ -14,6 +14,7 @@ from app.movies.schemas import (
     PersonRead,
     ReviewRead,
 )
+from app.movies.service import MovieSort, SortOrder
 
 router = APIRouter()
 
@@ -46,9 +47,30 @@ async def list_movies(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
     q: str | None = Query(None, description="Busca parcial por título"),
+    genre_ids: list[str] | None = Query(None, description="Filtra por qualquer um destes gêneros"),
+    director: str | None = Query(None, description="Busca parcial por nome do diretor"),
+    year_from: int | None = Query(None, description="Ano de lançamento mínimo"),
+    year_to: int | None = Query(None, description="Ano de lançamento máximo"),
+    rating_min: float | None = Query(None, ge=0, le=10, description="Nota média mínima"),
+    rating_max: float | None = Query(None, ge=0, le=10, description="Nota média máxima"),
+    sort: MovieSort = Query("title", description="Campo de ordenação"),
+    order: SortOrder = Query("asc", description="Direção da ordenação"),
     db: AsyncSession = Depends(get_db),
 ) -> Paginated[MovieListItem]:
-    rows, total = await service.list_movies(db, page=page, page_size=page_size, q=q)
+    rows, total = await service.list_movies(
+        db,
+        page=page,
+        page_size=page_size,
+        q=q,
+        genre_ids=genre_ids,
+        director=director,
+        year_from=year_from,
+        year_to=year_to,
+        rating_min=rating_min,
+        rating_max=rating_max,
+        sort=sort,
+        order=order,
+    )
     items = [
         MovieListItem(
             sk_movie_id=movie.sk_movie_id,
@@ -57,8 +79,9 @@ async def list_movies(
             url_poster=movie.url_poster,
             nota_media=nota_media,
             qtd_avaliacoes=qtd_avaliacoes,
+            popularidade=popularidade,
         )
-        for movie, nota_media, qtd_avaliacoes in rows
+        for movie, nota_media, qtd_avaliacoes, popularidade in rows
     ]
     return Paginated(items=items, total=total, page=page, page_size=page_size)
 

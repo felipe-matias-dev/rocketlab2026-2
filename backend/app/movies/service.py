@@ -2,14 +2,26 @@
 
 from __future__ import annotations
 
-from sqlalchemy import func, select
+from typing import Literal
+
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.movies.models import DimGenre, DimMovie, DimPerson, MovieReview, generate_surrogate_key
+from app.movies.models import (
+    DimGenre,
+    DimMovie,
+    DimPerson,
+    FactMoviePerformance,
+    MovieReview,
+    generate_surrogate_key,
+)
 from app.movies.schemas import MovieCreate, MovieUpdate, ReviewCreate
 
-MovieWithRating = tuple[DimMovie, float | None, int]
+MovieWithRating = tuple[DimMovie, float | None, int, float | None]
+
+MovieSort = Literal["title", "popularity", "rating", "recent"]
+SortOrder = Literal["asc", "desc"]
 
 
 class InvalidGenreError(ValueError):
@@ -33,31 +45,87 @@ def _reviews_aggregate():
 
 
 async def list_movies(
-    session: AsyncSession, *, page: int, page_size: int, q: str | None = None
+    session: AsyncSession,
+    *,
+    page: int,
+    page_size: int,
+    q: str | None = None,
+    genre_ids: list[str] | None = None,
+    director: str | None = None,
+    year_from: int | None = None,
+    year_to: int | None = None,
+    rating_min: float | None = None,
+    rating_max: float | None = None,
+    sort: MovieSort = "title",
+    order: SortOrder = "asc",
 ) -> tuple[list[MovieWithRating], int]:
     """Retorna uma página de filmes com nota média/contagem calculadas ao vivo.
 
-    Se `q` for informado, filtra por título (busca parcial, sem diferenciar caixa).
+    Filtros são combinados com AND entre si; dentro de `genre_ids`, um filme que
+    tenha qualquer um dos gêneros informados já entra (OR). `rating_min`/`rating_max`
+    filtram pela nota média das avaliações de usuários (não pela nota do TMDB).
     """
 
     reviews_agg = _reviews_aggregate()
-    title_filter = DimMovie.titulo.ilike(f"%{q}%") if q else None
+
+    filters = []
+    if q:
+        filters.append(DimMovie.titulo.ilike(f"%{q}%"))
+    if genre_ids:
+        filters.append(DimMovie.genres.any(DimGenre.sk_genre_id.in_(genre_ids)))
+    if director:
+        filters.append(
+            DimMovie.people.any(
+                and_(
+                    DimPerson.tipo_pessoa == "Diretor",
+                    DimPerson.nome_pessoa.ilike(f"%{director}%"),
+                )
+            )
+        )
+    if year_from is not None:
+        filters.append(DimMovie.ano_lancamento >= year_from)
+    if year_to is not None:
+        filters.append(DimMovie.ano_lancamento <= year_to)
+    if rating_min is not None:
+        filters.append(reviews_agg.c.nota_media >= rating_min)
+    if rating_max is not None:
+        filters.append(reviews_agg.c.nota_media <= rating_max)
+
+    sort_columns = {
+        "title": DimMovie.titulo,
+        "popularity": FactMoviePerformance.popularidade,
+        "rating": reviews_agg.c.nota_media,
+        "recent": DimMovie.criado_em,
+    }
+    order_column = sort_columns[sort]
+    order_clause = order_column.desc() if order == "desc" else order_column.asc()
+    if sort in ("popularity", "rating"):
+        # Filmes sem popularidade/avaliação ainda aparecem, só ficam por último.
+        order_clause = order_clause.nulls_last()
 
     query = (
         select(
             DimMovie,
             reviews_agg.c.nota_media,
             func.coalesce(reviews_agg.c.qtd_avaliacoes, 0),
+            FactMoviePerformance.popularidade,
         )
         .outerjoin(reviews_agg, reviews_agg.c.sk_movie_id == DimMovie.sk_movie_id)
-        .order_by(DimMovie.titulo)
+        .outerjoin(
+            FactMoviePerformance, FactMoviePerformance.sk_movie_id == DimMovie.sk_movie_id
+        )
+        .order_by(order_clause, DimMovie.titulo)
         .offset((page - 1) * page_size)
         .limit(page_size)
     )
-    count_query = select(func.count()).select_from(DimMovie)
-    if title_filter is not None:
-        query = query.where(title_filter)
-        count_query = count_query.where(title_filter)
+    count_query = (
+        select(func.count())
+        .select_from(DimMovie)
+        .outerjoin(reviews_agg, reviews_agg.c.sk_movie_id == DimMovie.sk_movie_id)
+    )
+    for movie_filter in filters:
+        query = query.where(movie_filter)
+        count_query = count_query.where(movie_filter)
 
     total = await session.scalar(count_query)
     rows = (await session.execute(query)).all()
@@ -83,6 +151,28 @@ async def list_genres(session: AsyncSession) -> list[DimGenre]:
     """Lista todos os gêneros, para popular o formulário de cadastro de filme."""
 
     query = select(DimGenre).order_by(DimGenre.nome_genero)
+    return list((await session.scalars(query)).all())
+
+
+async def list_directors(
+    session: AsyncSession, *, q: str | None = None, limit: int = 20
+) -> list[str]:
+    """Busca nomes distintos de diretores para o autocomplete do filtro do catálogo.
+
+    A base tem ~65 mil diretores distintos (e nomes bagunçados vindos da fonte de
+    dados), então isso é sempre uma busca por prefixo/trecho com limite, nunca uma
+    listagem completa.
+    """
+
+    query = (
+        select(DimPerson.nome_pessoa)
+        .where(DimPerson.tipo_pessoa == "Diretor")
+        .distinct()
+        .order_by(DimPerson.nome_pessoa)
+        .limit(limit)
+    )
+    if q:
+        query = query.where(DimPerson.nome_pessoa.ilike(f"%{q}%"))
     return list((await session.scalars(query)).all())
 
 

@@ -1,5 +1,5 @@
 import { apiClient, buildQuery } from './client'
-import type { MovieDetail, MovieInput, MovieListItem } from '../types/movie'
+import type { MovieDetail, MovieInput, MovieListItem, MovieSort, SortOrder } from '../types/movie'
 import type { Paginated } from '../types/pagination'
 import type { Review, ReviewCreateInput } from '../types/review'
 
@@ -7,6 +7,14 @@ export type ListMoviesParams = {
   page?: number
   page_size?: number
   q?: string
+  genre_ids?: string[]
+  director?: string
+  year_from?: number
+  year_to?: number
+  rating_min?: number
+  rating_max?: number
+  sort?: MovieSort
+  order?: SortOrder
 }
 
 export function listMovies(params: ListMoviesParams = {}): Promise<Paginated<MovieListItem>> {

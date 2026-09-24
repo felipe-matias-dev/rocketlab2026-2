@@ -28,6 +28,7 @@ class MovieListItem(BaseModel):
     url_poster: str | None
     nota_media: float | None
     qtd_avaliacoes: int
+    popularidade: float | None
 
 
 class GenreRead(BaseModel):

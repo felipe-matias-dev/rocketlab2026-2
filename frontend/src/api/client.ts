@@ -45,10 +45,17 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await response.json()) as T
 }
 
-export function buildQuery(params: Record<string, string | number | undefined>): string {
+type QueryValue = string | number | undefined | string[]
+
+export function buildQuery(params: Record<string, QueryValue>): string {
   const query = new URLSearchParams()
   for (const [key, value] of Object.entries(params)) {
-    if (value !== undefined && value !== '') query.set(key, String(value))
+    if (value === undefined || value === '') continue
+    if (Array.isArray(value)) {
+      for (const item of value) query.append(key, item)
+    } else {
+      query.set(key, String(value))
+    }
   }
   const serialized = query.toString()
   return serialized ? `?${serialized}` : ''

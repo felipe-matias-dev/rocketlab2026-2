@@ -18,7 +18,11 @@ export interface MovieListItem {
   url_poster: string | null
   nota_media: number | null
   qtd_avaliacoes: number
+  popularidade: number | null
 }
+
+export type MovieSort = 'title' | 'popularity' | 'rating' | 'recent'
+export type SortOrder = 'asc' | 'desc'
 
 export interface MovieDetail {
   sk_movie_id: string
