@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Generic, TypeVar
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 T = TypeVar("T")
 
@@ -73,3 +73,34 @@ class MovieDetail(BaseModel):
     reviews: list[ReviewRead]
     nota_media: float | None
     qtd_avaliacoes: int
+
+
+class MovieCreate(BaseModel):
+    """Dados de entrada para cadastrar um filme.
+
+    `genre_ids` deve referenciar gêneros já existentes (GET /genres).
+    `diretor` é texto livre: busca ou cria a pessoa em dim_people.
+    """
+
+    titulo: str = Field(min_length=1)
+    data_lancamento: date | None = None
+    ano_lancamento: int | None = None
+    duracao_minutos: int | None = None
+    status_filme: str | None = None
+    sinopse: str | None = None
+    url_poster: str | None = None
+    url_backdrop: str | None = None
+    genre_ids: list[str] = Field(default_factory=list)
+    diretor: str | None = None
+
+
+class MovieUpdate(MovieCreate):
+    """Substituição completa dos campos editáveis (PUT). Mesma forma de MovieCreate."""
+
+
+class ReviewCreate(BaseModel):
+    """Dados de entrada para uma nova avaliação. Nota na escala 0-10 (não 1-5)."""
+
+    nome: str = Field(min_length=1, max_length=120)
+    nota: float = Field(ge=0, le=10)
+    comentario: str = Field(min_length=1, max_length=4000)

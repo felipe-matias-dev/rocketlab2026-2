@@ -1,0 +1,20 @@
+from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.db.session import get_db
+from app.movies import service
+from app.movies.schemas import ReviewCreate, ReviewRead
+
+router = APIRouter()
+
+
+@router.post(
+    "/{sk_movie_id}/reviews", response_model=ReviewRead, status_code=status.HTTP_201_CREATED
+)
+async def create_review(
+    sk_movie_id: str, payload: ReviewCreate, db: AsyncSession = Depends(get_db)
+) -> ReviewRead:
+    review = await service.create_review(db, sk_movie_id, payload)
+    if review is None:
+        raise HTTPException(status_code=404, detail="Filme não encontrado")
+    return ReviewRead.model_validate(review)
