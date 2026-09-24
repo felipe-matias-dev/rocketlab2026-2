@@ -1,9 +1,9 @@
 import { FilmSlate, Star } from '@phosphor-icons/react'
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 
 import { ApiError } from '../api/client'
-import { getMovie } from '../api/movies'
+import { deleteMovie, getMovie } from '../api/movies'
 import ReviewForm from '../components/ReviewForm'
 import ReviewList from '../components/ReviewList'
 import type { MovieDetail } from '../types/movie'
@@ -24,9 +24,11 @@ function MovieDetailSkeleton() {
 
 function MovieDetailPage() {
   const { movieId } = useParams<{ movieId: string }>()
+  const navigate = useNavigate()
   const [movie, setMovie] = useState<MovieDetail | null>(null)
   const [notFound, setNotFound] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
 
   useEffect(() => {
     if (!movieId) return
@@ -59,6 +61,20 @@ function MovieDetailPage() {
     })
   }
 
+  async function handleDelete() {
+    if (!movieId) return
+    if (!window.confirm('Remover este filme? Essa ação não pode ser desfeita.')) return
+
+    setDeleting(true)
+    try {
+      await deleteMovie(movieId)
+      navigate('/')
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Erro ao remover o filme.')
+      setDeleting(false)
+    }
+  }
+
   if (notFound) {
     return (
       <div>
@@ -80,9 +96,27 @@ function MovieDetailPage() {
 
   return (
     <div>
-      <Link to="/" className="text-sm text-accent hover:text-accent-hover">
-        ← Voltar ao catálogo
-      </Link>
+      <div className="flex items-center justify-between">
+        <Link to="/" className="text-sm text-accent hover:text-accent-hover">
+          ← Voltar ao catálogo
+        </Link>
+        <div className="flex items-center gap-4">
+          <Link
+            to={`/movies/${movie.sk_movie_id}/edit`}
+            className="text-sm text-accent hover:text-accent-hover"
+          >
+            Editar filme
+          </Link>
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={deleting}
+            className="text-sm text-destructive hover:opacity-75 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {deleting ? 'Removendo...' : 'Remover filme'}
+          </button>
+        </div>
+      </div>
 
       <div className="mt-4 flex flex-col gap-6 sm:flex-row">
         <div className="aspect-2/3 w-full max-w-56 shrink-0 overflow-hidden rounded-md border border-border bg-zinc-100">
