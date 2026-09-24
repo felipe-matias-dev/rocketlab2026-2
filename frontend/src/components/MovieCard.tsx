@@ -1,6 +1,7 @@
 import { FilmSlate, Star } from '@phosphor-icons/react'
 import { Link } from 'react-router-dom'
 
+import { focusRingClass } from '../styles/interactive'
 import type { MovieListItem } from '../types/movie'
 
 interface MovieCardProps {
@@ -11,7 +12,7 @@ function MovieCard({ movie }: MovieCardProps) {
   return (
     <Link
       to={`/movies/${movie.sk_movie_id}`}
-      className="group flex flex-col overflow-hidden rounded-md border border-border bg-surface transition-colors hover:border-accent"
+      className={`group flex flex-col overflow-hidden rounded-md border border-border bg-surface transition-colors hover:border-accent ${focusRingClass}`}
     >
       <div className="aspect-2/3 w-full bg-zinc-100">
         {movie.url_poster ? (
@@ -32,8 +33,8 @@ function MovieCard({ movie }: MovieCardProps) {
         <div className="mt-auto flex items-center justify-between text-xs">
           <span className="font-medium text-ink">{movie.ano_lancamento ?? '—'}</span>
           {movie.qtd_avaliacoes > 0 ? (
-            <span className="flex items-center gap-1 font-medium text-accent">
-              <Star size={14} weight="fill" />
+            <span className="flex items-center gap-1 font-medium text-ink">
+              <Star size={14} weight="fill" className="text-accent" />
               {movie.nota_media?.toFixed(1)}
             </span>
           ) : (

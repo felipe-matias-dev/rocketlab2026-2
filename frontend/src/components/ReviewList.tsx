@@ -27,8 +27,8 @@ function ReviewList({ reviews }: ReviewListProps) {
         <li key={review.sk_movie_review_id} className="flex flex-col gap-1 py-4 first:pt-0">
           <div className="flex items-center justify-between gap-4">
             <span className="text-sm font-medium text-ink">{review.nome}</span>
-            <span className="flex shrink-0 items-center gap-1 text-sm text-accent">
-              <Star size={14} weight="fill" />
+            <span className="flex shrink-0 items-center gap-1 text-sm font-medium text-ink">
+              <Star size={14} weight="fill" className="text-accent" />
               {review.nota.toFixed(1)}
             </span>
           </div>

@@ -1,8 +1,11 @@
+import { Check, FilmSlate } from '@phosphor-icons/react'
 import { useEffect, useState } from 'react'
 
 import { ApiError } from '../api/client'
 import { listGenres } from '../api/genres'
+import { focusRingClass } from '../styles/interactive'
 import type { Genre, MovieDetail, MovieInput } from '../types/movie'
+import { translateGenreName } from '../utils/genreLabels'
 
 const STATUS_OPTIONS = ['Planejado', 'Em Produção', 'Pós-Produção', 'Lançado']
 
@@ -22,6 +25,30 @@ function Field({ label, htmlFor, children }: FieldProps) {
         {label}
       </label>
       {children}
+    </div>
+  )
+}
+
+interface ImagePreviewProps {
+  url: string
+  alt: string
+  containerClassName: string
+}
+
+function ImagePreview({ url, alt, containerClassName }: ImagePreviewProps) {
+  const [failed, setFailed] = useState(false)
+
+  if (!url.trim()) return null
+
+  return (
+    <div className={`mt-2 overflow-hidden rounded-md border border-border bg-zinc-100 ${containerClassName}`}>
+      {failed ? (
+        <div className="flex h-full w-full items-center justify-center text-zinc-300">
+          <FilmSlate size={28} weight="light" />
+        </div>
+      ) : (
+        <img src={url} alt={alt} className="h-full w-full object-cover" onError={() => setFailed(true)} />
+      )}
     </div>
   )
 }
@@ -106,6 +133,14 @@ function MovieForm({ initialValues, submitLabel, onSubmit, onSuccess }: MovieFor
     setValues((current) => ({ ...current, [field]: value }))
   }
 
+  function handleDateChange(value: string) {
+    setValues((current) => ({
+      ...current,
+      data_lancamento: value,
+      ano_lancamento: value ? value.slice(0, 4) : current.ano_lancamento,
+    }))
+  }
+
   function toggleGenre(genreId: string) {
     setValues((current) => ({
       ...current,
@@ -139,7 +174,7 @@ function MovieForm({ initialValues, submitLabel, onSubmit, onSuccess }: MovieFor
           maxLength={500}
           value={values.titulo}
           onChange={(event) => updateField('titulo', event.target.value)}
-          className={inputClass}
+          className={`${inputClass} max-w-lg`}
         />
       </Field>
 
@@ -160,7 +195,7 @@ function MovieForm({ initialValues, submitLabel, onSubmit, onSuccess }: MovieFor
             id="data_lancamento"
             type="date"
             value={values.data_lancamento}
-            onChange={(event) => updateField('data_lancamento', event.target.value)}
+            onChange={(event) => handleDateChange(event.target.value)}
             className={inputClass}
           />
         </Field>
@@ -212,6 +247,12 @@ function MovieForm({ initialValues, submitLabel, onSubmit, onSuccess }: MovieFor
             onChange={(event) => updateField('url_poster', event.target.value)}
             className={inputClass}
           />
+          <ImagePreview
+            key={values.url_poster}
+            url={values.url_poster}
+            alt="Pré-visualização do pôster"
+            containerClassName="aspect-2/3 w-28"
+          />
         </Field>
         <Field label="URL do backdrop" htmlFor="url_backdrop">
           <input
@@ -220,6 +261,12 @@ function MovieForm({ initialValues, submitLabel, onSubmit, onSuccess }: MovieFor
             value={values.url_backdrop}
             onChange={(event) => updateField('url_backdrop', event.target.value)}
             className={inputClass}
+          />
+          <ImagePreview
+            key={values.url_backdrop}
+            url={values.url_backdrop}
+            alt="Pré-visualização do backdrop"
+            containerClassName="aspect-video w-48"
           />
         </Field>
       </div>
@@ -237,6 +284,7 @@ function MovieForm({ initialValues, submitLabel, onSubmit, onSuccess }: MovieFor
 
       <div>
         <span className="text-sm font-medium text-ink">Gêneros</span>
+        <p className="mt-0.5 text-xs text-ink-muted">Selecione um ou mais gêneros.</p>
         <div className="mt-2 flex flex-wrap gap-2">
           {genres === null && <span className="text-sm text-ink-muted">Carregando...</span>}
           {genres?.map((genre) => {
@@ -245,14 +293,16 @@ function MovieForm({ initialValues, submitLabel, onSubmit, onSuccess }: MovieFor
               <button
                 key={genre.sk_genre_id}
                 type="button"
+                aria-pressed={selected}
                 onClick={() => toggleGenre(genre.sk_genre_id)}
-                className={
+                className={`flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${focusRingClass} ${
                   selected
-                    ? 'rounded-full border border-accent bg-accent px-3 py-1 text-xs font-medium text-white'
-                    : 'rounded-full border border-border px-3 py-1 text-xs text-ink-muted transition-colors hover:border-accent'
-                }
+                    ? 'border-accent bg-accent text-ink'
+                    : 'border-border text-ink-muted hover:border-accent'
+                }`}
               >
-                {genre.nome_genero}
+                {selected && <Check size={12} />}
+                {translateGenreName(genre.nome_genero)}
               </button>
             )
           })}
@@ -264,7 +314,7 @@ function MovieForm({ initialValues, submitLabel, onSubmit, onSuccess }: MovieFor
       <button
         type="submit"
         disabled={submitting}
-        className="w-fit rounded-md bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+        className="w-fit rounded-md bg-accent px-4 py-2 text-sm font-medium text-ink transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
       >
         {submitting ? 'Salvando...' : submitLabel}
       </button>

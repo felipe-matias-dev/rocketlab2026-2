@@ -1,5 +1,6 @@
 import { ArrowDown, ArrowUp } from '@phosphor-icons/react'
 
+import { focusRingClass } from '../styles/interactive'
 import type { MovieSort, SortOrder } from '../types/movie'
 
 const SORT_OPTIONS: { value: MovieSort; label: string }[] = [
@@ -36,7 +37,7 @@ function SortControl({ sort, order, onSortChange, onOrderChange }: SortControlPr
         onClick={() => onOrderChange(order === 'asc' ? 'desc' : 'asc')}
         aria-label={order === 'asc' ? 'Ordem crescente, clique para inverter' : 'Ordem decrescente, clique para inverter'}
         title={order === 'asc' ? 'Crescente' : 'Decrescente'}
-        className="rounded-md border border-border bg-surface p-2 text-ink-muted transition-colors hover:border-accent hover:text-ink"
+        className={`rounded-md border border-border bg-surface p-2 text-ink-muted transition-colors hover:border-accent hover:text-ink ${focusRingClass}`}
       >
         {order === 'asc' ? <ArrowUp size={18} /> : <ArrowDown size={18} />}
       </button>

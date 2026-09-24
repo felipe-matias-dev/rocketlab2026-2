@@ -2,7 +2,9 @@ import { CaretDown, Check } from '@phosphor-icons/react'
 import { useEffect, useRef, useState } from 'react'
 
 import { listDirectors } from '../api/directors'
+import { focusRingClass } from '../styles/interactive'
 import type { Genre } from '../types/movie'
+import { translateGenreName } from '../utils/genreLabels'
 
 const inputClass =
   'w-full rounded-md border border-border bg-surface px-3 py-1.5 text-sm text-ink placeholder:text-ink-muted focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none'
@@ -47,32 +49,34 @@ function RangeInputs({
   step,
 }: RangeInputsProps) {
   return (
-    <div className="flex items-center gap-2">
-      <input
-        type="number"
-        inputMode="decimal"
-        value={fromValue}
-        onChange={(event) => onFromChange(event.target.value)}
-        placeholder={fromLabel}
-        aria-label={fromLabel}
-        min={min}
-        max={max}
-        step={step}
-        className={`${inputClass} w-20`}
-      />
-      <span className="text-ink-muted">–</span>
-      <input
-        type="number"
-        inputMode="decimal"
-        value={toValue}
-        onChange={(event) => onToChange(event.target.value)}
-        placeholder={toLabel}
-        aria-label={toLabel}
-        min={min}
-        max={max}
-        step={step}
-        className={`${inputClass} w-20`}
-      />
+    <div className="flex items-end gap-2">
+      <label className="flex flex-col gap-0.5">
+        <span className="text-[10px] font-medium tracking-wide text-ink-muted uppercase">{fromLabel}</span>
+        <input
+          type="number"
+          inputMode="decimal"
+          value={fromValue}
+          onChange={(event) => onFromChange(event.target.value)}
+          min={min}
+          max={max}
+          step={step}
+          className={`${inputClass} w-20`}
+        />
+      </label>
+      <span className="pb-2 text-ink-muted">–</span>
+      <label className="flex flex-col gap-0.5">
+        <span className="text-[10px] font-medium tracking-wide text-ink-muted uppercase">{toLabel}</span>
+        <input
+          type="number"
+          inputMode="decimal"
+          value={toValue}
+          onChange={(event) => onToChange(event.target.value)}
+          min={min}
+          max={max}
+          step={step}
+          className={`${inputClass} w-20`}
+        />
+      </label>
     </div>
   )
 }
@@ -111,7 +115,7 @@ function GenreCombobox({ genres, selectedGenreIds, onToggleGenre }: GenreCombobo
         onClick={() => setOpen((current) => !current)}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className="flex w-48 items-center justify-between gap-2 rounded-md border border-border bg-surface px-3 py-1.5 text-sm focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
+        className={`flex w-48 items-center justify-between gap-2 rounded-md border border-border bg-surface px-3 py-1.5 text-sm ${focusRingClass}`}
       >
         <span className={selectedGenreIds.length === 0 ? 'text-ink-muted' : 'text-ink'}>{summary}</span>
         <CaretDown size={14} className="shrink-0 text-ink-muted" />
@@ -132,9 +136,9 @@ function GenreCombobox({ genres, selectedGenreIds, onToggleGenre }: GenreCombobo
                   role="option"
                   aria-selected={selected}
                   onClick={() => onToggleGenre(genre.sk_genre_id)}
-                  className="flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-sm text-ink hover:bg-accent/10"
+                  className={`flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-sm text-ink hover:bg-accent/10 ${focusRingClass}`}
                 >
-                  {genre.nome_genero}
+                  {translateGenreName(genre.nome_genero)}
                   {selected && <Check size={14} className="shrink-0 text-accent" />}
                 </button>
               </li>
@@ -207,7 +211,7 @@ function DirectorFilter({ value, onChange }: DirectorFilterProps) {
               <button
                 type="button"
                 onClick={() => selectSuggestion(name)}
-                className="block w-full px-3 py-1.5 text-left text-sm whitespace-nowrap text-ink hover:bg-accent/10"
+                className={`block w-full px-3 py-1.5 text-left text-sm whitespace-nowrap text-ink hover:bg-accent/10 ${focusRingClass}`}
               >
                 {name}
               </button>
@@ -295,7 +299,7 @@ function FilterBar({
         <button
           type="button"
           onClick={onClear}
-          className="rounded-md px-3 py-1.5 text-sm font-medium text-accent hover:underline"
+          className={`rounded-md px-3 py-1.5 text-sm font-medium text-ink underline decoration-accent decoration-2 underline-offset-2 hover:decoration-accent-hover ${focusRingClass}`}
         >
           Limpar filtros
         </button>

@@ -6,7 +6,9 @@ import { ApiError } from '../api/client'
 import { deleteMovie, getMovie } from '../api/movies'
 import ReviewForm from '../components/ReviewForm'
 import ReviewList from '../components/ReviewList'
+import { focusRingClass } from '../styles/interactive'
 import type { MovieDetail } from '../types/movie'
+import { translateGenreName } from '../utils/genreLabels'
 import type { Review } from '../types/review'
 
 function MovieDetailSkeleton() {
@@ -79,7 +81,10 @@ function MovieDetailPage() {
     return (
       <div>
         <p className="text-ink-muted">Filme não encontrado.</p>
-        <Link to="/" className="mt-2 inline-block text-sm text-accent hover:text-accent-hover">
+        <Link
+          to="/"
+          className={`mt-2 inline-block rounded-md text-sm font-medium text-ink underline decoration-accent decoration-2 underline-offset-2 hover:decoration-accent-hover ${focusRingClass}`}
+        >
           Voltar ao catálogo
         </Link>
       </div>
@@ -97,13 +102,16 @@ function MovieDetailPage() {
   return (
     <div>
       <div className="flex items-center justify-between">
-        <Link to="/" className="text-sm text-accent hover:text-accent-hover">
+        <Link
+          to="/"
+          className={`rounded-md text-sm font-medium text-ink underline decoration-accent decoration-2 underline-offset-2 hover:decoration-accent-hover ${focusRingClass}`}
+        >
           ← Voltar ao catálogo
         </Link>
         <div className="flex items-center gap-4">
           <Link
             to={`/movies/${movie.sk_movie_id}/edit`}
-            className="text-sm text-accent hover:text-accent-hover"
+            className={`rounded-md text-sm font-medium text-ink underline decoration-accent decoration-2 underline-offset-2 hover:decoration-accent-hover ${focusRingClass}`}
           >
             Editar filme
           </Link>
@@ -111,7 +119,7 @@ function MovieDetailPage() {
             type="button"
             onClick={handleDelete}
             disabled={deleting}
-            className="text-sm text-destructive hover:opacity-75 disabled:cursor-not-allowed disabled:opacity-50"
+            className={`rounded-md text-sm text-destructive hover:opacity-75 disabled:cursor-not-allowed disabled:opacity-50 ${focusRingClass}`}
           >
             {deleting ? 'Removendo...' : 'Remover filme'}
           </button>
@@ -140,8 +148,8 @@ function MovieDetailPage() {
             <span>{movie.ano_lancamento ?? 'Ano desconhecido'}</span>
             {movie.duracao_minutos !== null && <span>{movie.duracao_minutos} min</span>}
             {movie.status_filme && <span>{movie.status_filme}</span>}
-            <span className="flex items-center gap-1 text-accent">
-              <Star size={14} weight="fill" />
+            <span className="flex items-center gap-1 text-ink">
+              <Star size={14} weight="fill" className="text-accent" />
               {movie.nota_media !== null
                 ? `${movie.nota_media.toFixed(1)} (${movie.qtd_avaliacoes})`
                 : 'Sem avaliações'}
@@ -155,7 +163,7 @@ function MovieDetailPage() {
                   key={genre.sk_genre_id}
                   className="rounded-full border border-border px-2.5 py-0.5 text-xs text-ink-muted"
                 >
-                  {genre.nome_genero}
+                  {translateGenreName(genre.nome_genero)}
                 </span>
               ))}
             </div>
