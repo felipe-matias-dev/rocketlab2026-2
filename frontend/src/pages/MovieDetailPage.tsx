@@ -7,9 +7,95 @@ import { deleteMovie, getMovie } from '../api/movies'
 import ReviewForm from '../components/ReviewForm'
 import ReviewList from '../components/ReviewList'
 import { focusRingClass } from '../styles/interactive'
-import type { MovieDetail } from '../types/movie'
+import type { MovieDetail, Person } from '../types/movie'
 import { translateGenreName } from '../utils/genreLabels'
 import type { Review } from '../types/review'
+
+const CAST_LIMIT = 10
+
+function formatUsd(value: number | null): string | null {
+  if (value === null) return null
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0,
+  }).format(value)
+}
+
+function formatVotes(count: number): string {
+  return new Intl.NumberFormat('pt-BR').format(count)
+}
+
+function CreditsSection({ people }: { people: Person[] }) {
+  const directors = people.filter((person) => person.tipo_pessoa === 'Diretor')
+  const writers = people.filter((person) => person.tipo_pessoa === 'Roteirista')
+  const cast = people.filter((person) => person.tipo_pessoa === 'Ator')
+  const shownCast = cast.slice(0, CAST_LIMIT)
+  const extraCast = cast.length - shownCast.length
+
+  if (directors.length === 0 && writers.length === 0 && cast.length === 0) return null
+
+  return (
+    <div className="flex flex-col gap-1 text-sm text-ink-muted">
+      {directors.length > 0 && <p>Direção: {directors.map((p) => p.nome_pessoa).join(', ')}</p>}
+      {writers.length > 0 && <p>Roteiro: {writers.map((p) => p.nome_pessoa).join(', ')}</p>}
+      {cast.length > 0 && (
+        <p>
+          Elenco: {shownCast.map((p) => p.nome_pessoa).join(', ')}
+          {extraCast > 0 && ` e mais ${extraCast}`}
+        </p>
+      )}
+    </div>
+  )
+}
+
+function MetricsSection({ movie }: { movie: MovieDetail }) {
+  const stats: { label: string; value: string }[] = []
+  const performance = movie.performance
+
+  if (movie.nota_media !== null) {
+    stats.push({
+      label: 'Nota dos usuários',
+      value: `${movie.nota_media.toFixed(1)} (${movie.qtd_avaliacoes} avaliações)`,
+    })
+  }
+
+  if (performance?.nota_tmdb !== null && performance?.nota_tmdb !== undefined) {
+    const votes = performance.qtd_tmdb ? ` (${formatVotes(performance.qtd_tmdb)} votos)` : ''
+    stats.push({ label: 'Nota TMDB', value: `${performance.nota_tmdb.toFixed(1)}${votes}` })
+  }
+
+  if (performance?.nota_imdb !== null && performance?.nota_imdb !== undefined) {
+    const votes = performance.qtd_imdb ? ` (${formatVotes(performance.qtd_imdb)} votos)` : ''
+    stats.push({ label: 'Nota IMDB', value: `${performance.nota_imdb.toFixed(1)}${votes}` })
+  }
+
+  const orcamento = performance ? formatUsd(performance.orcamento_usd) : null
+  if (orcamento) stats.push({ label: 'Orçamento', value: orcamento })
+
+  const receita = performance ? formatUsd(performance.receita_usd) : null
+  if (receita) stats.push({ label: 'Receita', value: receita })
+
+  if (performance && performance.orcamento_usd !== null && performance.receita_usd !== null) {
+    stats.push({ label: 'Lucro', value: formatUsd(performance.lucro_usd) ?? '—' })
+  }
+
+  if (stats.length === 0) return null
+
+  return (
+    <section className="mt-10">
+      <h2 className="text-lg font-semibold text-ink">Bilheteria e avaliação externa</h2>
+      <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-3">
+        {stats.map((stat) => (
+          <div key={stat.label}>
+            <dt className="text-xs font-medium uppercase text-ink-muted">{stat.label}</dt>
+            <dd className="mt-1 text-sm text-ink">{stat.value}</dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+  )
+}
 
 function MovieDetailSkeleton() {
   return (
@@ -171,16 +257,25 @@ function MovieDetailPage() {
 
           {movie.sinopse && <p className="text-sm text-ink">{movie.sinopse}</p>}
 
-          {movie.people.length > 0 && (
-            <p className="text-sm text-ink-muted">
-              {movie.people
-                .filter((person) => person.tipo_pessoa === 'Diretor')
-                .map((person) => `Direção: ${person.nome_pessoa}`)
-                .join(', ')}
+          <CreditsSection people={movie.people} />
+
+          {movie.companies.length > 0 && (
+            <p className="flex flex-wrap items-center gap-2 text-sm text-ink-muted">
+              <span>Produtoras:</span>
+              {movie.companies.map((company) => (
+                <span
+                  key={company.sk_company_id}
+                  className="rounded-full border border-border px-2.5 py-0.5 text-xs"
+                >
+                  {company.nome_produtora}
+                </span>
+              ))}
             </p>
           )}
         </div>
       </div>
+
+      <MetricsSection movie={movie} />
 
       <section className="mt-10 grid gap-10 md:grid-cols-2">
         <div>

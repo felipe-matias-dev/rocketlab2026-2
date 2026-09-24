@@ -147,7 +147,9 @@ async def get_movie_detail(session: AsyncSession, sk_movie_id: str) -> DimMovie 
         .options(
             selectinload(DimMovie.genres),
             selectinload(DimMovie.people),
+            selectinload(DimMovie.companies),
             selectinload(DimMovie.reviews),
+            selectinload(DimMovie.performance),
         )
         .where(DimMovie.sk_movie_id == sk_movie_id)
     )

@@ -11,6 +11,23 @@ export interface Person {
   tipo_pessoa: 'Ator' | 'Diretor' | 'Roteirista'
 }
 
+export interface Company {
+  sk_company_id: string
+  nome_produtora: string
+}
+
+/** Métricas de bilheteria/popularidade importadas do CSV; ausente para parte dos filmes. */
+export interface Performance {
+  orcamento_usd: number | null
+  receita_usd: number | null
+  lucro_usd: number
+  popularidade: number | null
+  nota_tmdb: number | null
+  qtd_tmdb: number | null
+  nota_imdb: number | null
+  qtd_imdb: number | null
+}
+
 export interface MovieListItem {
   sk_movie_id: string
   titulo: string
@@ -37,9 +54,11 @@ export interface MovieDetail {
   url_backdrop: string | null
   genres: Genre[]
   people: Person[]
+  companies: Company[]
   reviews: Review[]
   nota_media: number | null
   qtd_avaliacoes: number
+  performance: Performance | null
 }
 
 /** Corpo de POST/PUT /movies — mesma forma nos dois (MovieCreate/MovieUpdate no backend). */

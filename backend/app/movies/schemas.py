@@ -46,6 +46,28 @@ class PersonRead(BaseModel):
     tipo_pessoa: str
 
 
+class CompanyRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    sk_company_id: str
+    nome_produtora: str
+
+
+class PerformanceRead(BaseModel):
+    """Métricas de bilheteria/popularidade importadas do CSV (fact_movies_performance)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    orcamento_usd: float | None
+    receita_usd: float | None
+    lucro_usd: float
+    popularidade: float | None
+    nota_tmdb: float | None
+    qtd_tmdb: int | None
+    nota_imdb: float | None
+    qtd_imdb: int | None
+
+
 class ReviewRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -71,9 +93,11 @@ class MovieDetail(BaseModel):
     url_backdrop: str | None
     genres: list[GenreRead]
     people: list[PersonRead]
+    companies: list[CompanyRead]
     reviews: list[ReviewRead]
     nota_media: float | None
     qtd_avaliacoes: int
+    performance: PerformanceRead | None
 
 
 class MovieCreate(BaseModel):

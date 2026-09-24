@@ -5,12 +5,14 @@ from app.db.session import get_db
 from app.movies import service
 from app.movies.models import DimMovie
 from app.movies.schemas import (
+    CompanyRead,
     GenreRead,
     MovieCreate,
     MovieDetail,
     MovieListItem,
     MovieUpdate,
     Paginated,
+    PerformanceRead,
     PersonRead,
     ReviewRead,
 )
@@ -36,9 +38,13 @@ def _build_movie_detail(movie: DimMovie) -> MovieDetail:
         url_backdrop=movie.url_backdrop,
         genres=[GenreRead.model_validate(genre) for genre in movie.genres],
         people=[PersonRead.model_validate(person) for person in movie.people],
+        companies=[CompanyRead.model_validate(company) for company in movie.companies],
         reviews=[ReviewRead.model_validate(review) for review in movie.reviews],
         nota_media=nota_media,
         qtd_avaliacoes=len(notas),
+        performance=(
+            PerformanceRead.model_validate(movie.performance) if movie.performance else None
+        ),
     )
 
 
