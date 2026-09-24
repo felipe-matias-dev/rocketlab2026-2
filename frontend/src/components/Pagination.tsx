@@ -6,28 +6,72 @@ interface PaginationProps {
   onPageChange: (page: number) => void
 }
 
+const WINDOW_SIZE = 5
+
+type PageItem = number | 'ellipsis-start' | 'ellipsis-end'
+
+function getPageItems(page: number, totalPages: number): PageItem[] {
+  const start = Math.min(Math.max(page - 2, 1), Math.max(totalPages - WINDOW_SIZE + 1, 1))
+  const end = Math.min(start + WINDOW_SIZE - 1, totalPages)
+
+  const items: PageItem[] = []
+  if (start > 1) {
+    items.push(1)
+    if (start > 2) items.push('ellipsis-start')
+  }
+  for (let p = start; p <= end; p++) items.push(p)
+  if (end < totalPages) {
+    if (end < totalPages - 1) items.push('ellipsis-end')
+    items.push(totalPages)
+  }
+  return items
+}
+
+const arrowButtonClass =
+  'flex items-center gap-1 rounded-md border border-border px-3 py-1.5 text-sm text-ink transition-colors hover:border-accent disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-border'
+
 function Pagination({ page, totalPages, onPageChange }: PaginationProps) {
   if (totalPages <= 1) return null
 
   return (
-    <nav className="mt-6 flex items-center justify-center gap-4" aria-label="Paginação">
+    <nav className="mt-6 flex flex-wrap items-center justify-center gap-2" aria-label="Paginação">
       <button
         type="button"
         onClick={() => onPageChange(page - 1)}
         disabled={page <= 1}
-        className="flex items-center gap-1 rounded-md border border-border px-3 py-1.5 text-sm text-ink transition-colors hover:border-accent disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-border"
+        className={arrowButtonClass}
       >
         <CaretLeft size={16} />
         Anterior
       </button>
-      <span className="text-sm text-ink-muted">
-        Página {page} de {totalPages}
-      </span>
+
+      {getPageItems(page, totalPages).map((item, index) =>
+        typeof item === 'number' ? (
+          <button
+            key={item}
+            type="button"
+            onClick={() => onPageChange(item)}
+            aria-current={item === page ? 'page' : undefined}
+            className={
+              item === page
+                ? 'rounded-md border border-accent bg-accent px-3 py-1.5 text-sm font-medium text-white'
+                : 'rounded-md border border-border px-3 py-1.5 text-sm text-ink transition-colors hover:border-accent'
+            }
+          >
+            {item}
+          </button>
+        ) : (
+          <span key={`${item}-${index}`} className="px-1 text-sm text-ink-muted">
+            …
+          </span>
+        ),
+      )}
+
       <button
         type="button"
         onClick={() => onPageChange(page + 1)}
         disabled={page >= totalPages}
-        className="flex items-center gap-1 rounded-md border border-border px-3 py-1.5 text-sm text-ink transition-colors hover:border-accent disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-border"
+        className={arrowButtonClass}
       >
         Próxima
         <CaretRight size={16} />
