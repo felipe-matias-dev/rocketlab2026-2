@@ -20,6 +20,13 @@ async def test_update_movie_preserves_cast_when_only_director_changes() -> None:
             f"/api/v1/movies/{RINGS_ID}",
             json={
                 "titulo": before["titulo"],
+                "data_lancamento": before["data_lancamento"],
+                "ano_lancamento": before["ano_lancamento"],
+                "duracao_minutos": before["duracao_minutos"],
+                "status_filme": before["status_filme"],
+                "sinopse": before["sinopse"],
+                "url_poster": before["url_poster"],
+                "url_backdrop": before["url_backdrop"],
                 "genre_ids": [g["sk_genre_id"] for g in before["genres"]],
                 "diretor": "Diretor Substituto de Teste",
             },
@@ -27,6 +34,13 @@ async def test_update_movie_preserves_cast_when_only_director_changes() -> None:
 
     assert response.status_code == 200
     body = response.json()
+
+    # PUT é substituição completa (sem semântica de PATCH): um campo omitido
+    # vira None. Confirma que enviar o corpo inteiro preserva os escalares.
+    assert body["ano_lancamento"] == before["ano_lancamento"]
+    assert body["data_lancamento"] == before["data_lancamento"]
+    assert body["duracao_minutos"] == before["duracao_minutos"]
+    assert body["status_filme"] == before["status_filme"]
 
     non_director_after = sorted(
         (p["sk_person_id"], p["tipo_pessoa"])
