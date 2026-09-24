@@ -8,7 +8,10 @@ function Layout() {
           <Link to="/" className="text-lg font-semibold text-ink">
             RocketLab Movie Admin
           </Link>
-          <Link to="/movies/new" className="text-sm font-medium text-accent hover:text-accent-hover">
+          <Link
+            to="/movies/new"
+            className="ml-auto rounded-md bg-accent px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-accent-hover"
+          >
             Cadastrar filme
           </Link>
         </nav>

@@ -27,17 +27,17 @@ function MovieCard({ movie }: MovieCardProps) {
           </div>
         )}
       </div>
-      <div className="flex flex-1 flex-col gap-1 p-3">
-        <h3 className="line-clamp-2 text-sm font-medium text-ink">{movie.titulo}</h3>
-        <div className="mt-auto flex items-center justify-between text-xs text-ink-muted">
-          <span>{movie.ano_lancamento ?? '—'}</span>
+      <div className="flex flex-1 flex-col gap-1.5 p-3.5">
+        <h3 className="line-clamp-2 text-sm leading-snug font-medium text-ink">{movie.titulo}</h3>
+        <div className="mt-auto flex items-center justify-between text-xs">
+          <span className="font-medium text-ink">{movie.ano_lancamento ?? '—'}</span>
           {movie.qtd_avaliacoes > 0 ? (
-            <span className="flex items-center gap-1 text-accent">
+            <span className="flex items-center gap-1 font-medium text-accent">
               <Star size={14} weight="fill" />
               {movie.nota_media?.toFixed(1)}
             </span>
           ) : (
-            <span>Sem avaliações</span>
+            <span className="text-ink-muted">Sem avaliações</span>
           )}
         </div>
       </div>
@@ -49,7 +49,7 @@ export function MovieCardSkeleton() {
   return (
     <div className="overflow-hidden rounded-md border border-border bg-surface">
       <div className="aspect-2/3 w-full animate-pulse bg-zinc-100" />
-      <div className="space-y-2 p-3">
+      <div className="space-y-2 p-3.5">
         <div className="h-3.5 w-4/5 animate-pulse rounded bg-zinc-100" />
         <div className="h-3 w-1/3 animate-pulse rounded bg-zinc-100" />
       </div>

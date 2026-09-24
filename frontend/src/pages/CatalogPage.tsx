@@ -1,3 +1,4 @@
+import { Funnel } from '@phosphor-icons/react'
 import { useEffect, useState } from 'react'
 
 import { listMovies } from '../api/movies'
@@ -39,7 +40,7 @@ interface CatalogData {
 
 function CatalogGrid({ children }: { children: React.ReactNode }) {
   return (
-    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+    <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
       {children}
     </div>
   )
@@ -65,6 +66,7 @@ function CatalogPage() {
   const [page, setPage] = useState(1)
   const [data, setData] = useState<CatalogData | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [filtersOpen, setFiltersOpen] = useState(false)
 
   useEffect(() => {
     listGenres()
@@ -149,6 +151,12 @@ function CatalogPage() {
   const hasActiveFilters =
     genreIds.length > 0 || Object.values(textInput).some((value) => value !== '')
 
+  const advancedFilterCount =
+    (genreIds.length > 0 ? 1 : 0) +
+    (textInput.director !== '' ? 1 : 0) +
+    (textInput.yearFrom !== '' || textInput.yearTo !== '' ? 1 : 0) +
+    (textInput.ratingMin !== '' || textInput.ratingMax !== '' ? 1 : 0)
+
   // Deriva o carregamento comparando os parâmetros já carregados com os atuais,
   // em vez de resetar `data` sincronamente no efeito (sem re-render extra).
   const currentKey = filterKey(page, genreIds, textFilters, sort, order)
@@ -158,32 +166,55 @@ function CatalogPage() {
 
   return (
     <div>
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <h1 className="text-2xl font-semibold text-ink">Catálogo</h1>
+      <h1 className="text-2xl font-semibold text-ink">Catálogo</h1>
+
+      <div className="mt-4 rounded-md border border-border bg-surface p-4">
         <div className="flex flex-wrap items-center gap-3">
           <SearchBar value={textInput.q} onChange={(value) => updateTextFilter('q', value)} />
-          <SortControl sort={sort} order={order} onSortChange={changeSort} onOrderChange={changeOrder} />
+          <div className="ml-auto flex flex-wrap items-center gap-3">
+            <SortControl sort={sort} order={order} onSortChange={changeSort} onOrderChange={changeOrder} />
+            <button
+              type="button"
+              onClick={() => setFiltersOpen((current) => !current)}
+              aria-expanded={filtersOpen}
+              className={`flex items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium transition-colors ${
+                filtersOpen
+                  ? 'border-accent text-accent'
+                  : 'border-border text-ink hover:border-accent'
+              }`}
+            >
+              <Funnel size={18} />
+              Filtros
+              {advancedFilterCount > 0 && (
+                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1 text-xs font-semibold text-white">
+                  {advancedFilterCount}
+                </span>
+              )}
+            </button>
+          </div>
         </div>
-      </div>
 
-      <div className="mt-4">
-        <FilterBar
-          genres={genres}
-          selectedGenreIds={genreIds}
-          onToggleGenre={toggleGenre}
-          director={textInput.director}
-          onDirectorChange={(value) => updateTextFilter('director', value)}
-          yearFrom={textInput.yearFrom}
-          yearTo={textInput.yearTo}
-          onYearFromChange={(value) => updateTextFilter('yearFrom', value)}
-          onYearToChange={(value) => updateTextFilter('yearTo', value)}
-          ratingMin={textInput.ratingMin}
-          ratingMax={textInput.ratingMax}
-          onRatingMinChange={(value) => updateTextFilter('ratingMin', value)}
-          onRatingMaxChange={(value) => updateTextFilter('ratingMax', value)}
-          hasActiveFilters={hasActiveFilters}
-          onClear={clearFilters}
-        />
+        {filtersOpen && (
+          <div className="mt-4 border-t border-border pt-4">
+            <FilterBar
+              genres={genres}
+              selectedGenreIds={genreIds}
+              onToggleGenre={toggleGenre}
+              director={textInput.director}
+              onDirectorChange={(value) => updateTextFilter('director', value)}
+              yearFrom={textInput.yearFrom}
+              yearTo={textInput.yearTo}
+              onYearFromChange={(value) => updateTextFilter('yearFrom', value)}
+              onYearToChange={(value) => updateTextFilter('yearTo', value)}
+              ratingMin={textInput.ratingMin}
+              ratingMax={textInput.ratingMax}
+              onRatingMinChange={(value) => updateTextFilter('ratingMin', value)}
+              onRatingMaxChange={(value) => updateTextFilter('ratingMax', value)}
+              hasActiveFilters={hasActiveFilters}
+              onClear={clearFilters}
+            />
+          </div>
+        )}
       </div>
 
       <div className="mt-6">

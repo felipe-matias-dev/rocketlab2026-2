@@ -255,7 +255,7 @@ function FilterBar({
   onClear,
 }: FilterBarProps) {
   return (
-    <div className="flex flex-wrap items-end gap-4 rounded-md border border-border bg-surface p-4">
+    <div className="flex flex-wrap items-end gap-4">
       <FilterGroup label="Gêneros">
         <GenreCombobox genres={genres} selectedGenreIds={selectedGenreIds} onToggleGenre={onToggleGenre} />
       </FilterGroup>
