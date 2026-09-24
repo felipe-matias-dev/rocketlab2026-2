@@ -7,8 +7,8 @@ function Layout() {
     <div className="min-h-dvh bg-paper text-ink">
       <header className="border-b border-border">
         <nav className="mx-auto flex max-w-7xl items-center gap-6 px-4 py-4">
-          <Link to="/" className={`rounded-md text-lg font-semibold text-ink ${focusRingClass}`}>
-            RocketLab Movie Admin
+          <Link to="/" className={`rounded-md ${focusRingClass}`}>
+            <img src="/logo.svg" alt="RocketLab Movie Admin" className="h-24 w-auto" />
           </Link>
           <Link
             to="/movies/new"
