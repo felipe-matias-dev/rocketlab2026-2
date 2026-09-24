@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from sqlalchemy import and_, func, select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -14,6 +14,7 @@ from app.movies.models import (
     DimPerson,
     FactMoviePerformance,
     MovieReview,
+    bridge_movie_person,
     generate_surrogate_key,
 )
 from app.movies.schemas import MovieCreate, MovieUpdate, ReviewCreate
@@ -74,14 +75,20 @@ async def list_movies(
     if genre_ids:
         filters.append(DimMovie.genres.any(DimGenre.sk_genre_id.in_(genre_ids)))
     if director:
-        filters.append(
-            DimMovie.people.any(
-                and_(
-                    DimPerson.tipo_pessoa == "Diretor",
-                    DimPerson.nome_pessoa.ilike(f"%{director}%"),
-                )
+        # Resolve os filmes do(s) diretor(es) correspondentes numa subquery à parte
+        # (IN não-correlacionado) em vez de `DimMovie.people.any(...)`: esse `.any()`
+        # compila para um EXISTS correlacionado, reavaliado para cada um dos ~95k
+        # filmes; a subquery IN resolve os diretores batendo com o ILIKE uma única
+        # vez e reduz a filtragem a uma busca indexada por sk_movie_id.
+        director_movie_ids = (
+            select(bridge_movie_person.c.sk_movie_id)
+            .join(DimPerson, DimPerson.sk_person_id == bridge_movie_person.c.sk_person_id)
+            .where(
+                DimPerson.tipo_pessoa == "Diretor",
+                DimPerson.nome_pessoa.ilike(f"%{director}%"),
             )
         )
+        filters.append(DimMovie.sk_movie_id.in_(director_movie_ids))
     if year_from is not None:
         filters.append(DimMovie.ano_lancamento >= year_from)
     if year_to is not None:
