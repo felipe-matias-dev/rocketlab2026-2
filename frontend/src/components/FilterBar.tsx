@@ -25,58 +25,134 @@ function FilterGroup({ label, children }: FilterGroupProps) {
   )
 }
 
-interface RangeInputsProps {
+// Bounds do dataset seedado (ver `backend/rocketlab.db`, tabela `dim_movies`):
+// ano_lancamento vai de 2016 a 2029, não a história inteira do cinema.
+const YEAR_MIN = 2016
+const YEAR_MAX = 2029
+
+const sliderThumbClass =
+  'absolute inset-y-0 w-full cursor-pointer appearance-none bg-transparent pointer-events-none ' +
+  '[&::-webkit-slider-runnable-track]:appearance-none [&::-moz-range-track]:appearance-none ' +
+  '[&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 ' +
+  '[&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full ' +
+  '[&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-accent [&::-webkit-slider-thumb]:bg-surface ' +
+  '[&::-webkit-slider-thumb]:shadow-sm [&::-webkit-slider-thumb]:cursor-pointer ' +
+  '[&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 ' +
+  '[&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 ' +
+  '[&::-moz-range-thumb]:border-accent [&::-moz-range-thumb]:bg-surface [&::-moz-range-thumb]:shadow-sm ' +
+  '[&::-moz-range-thumb]:cursor-pointer'
+
+interface YearRangeSliderProps {
   fromValue: string
   toValue: string
   onFromChange: (value: string) => void
   onToChange: (value: string) => void
-  fromLabel: string
-  toLabel: string
-  min?: number
-  max?: number
-  step?: number
 }
 
-function RangeInputs({
-  fromValue,
-  toValue,
-  onFromChange,
-  onToChange,
-  fromLabel,
-  toLabel,
-  min,
-  max,
-  step,
-}: RangeInputsProps) {
+function YearRangeSlider({ fromValue, toValue, onFromChange, onToChange }: YearRangeSliderProps) {
+  const from = fromValue === '' ? YEAR_MIN : Number(fromValue)
+  const to = toValue === '' ? YEAR_MAX : Number(toValue)
+
+  function handleFromChange(nextValue: number) {
+    const clamped = Math.min(nextValue, to)
+    onFromChange(clamped <= YEAR_MIN ? '' : String(clamped))
+  }
+
+  function handleToChange(nextValue: number) {
+    const clamped = Math.max(nextValue, from)
+    onToChange(clamped >= YEAR_MAX ? '' : String(clamped))
+  }
+
+  const fromPercent = ((from - YEAR_MIN) / (YEAR_MAX - YEAR_MIN)) * 100
+  const toPercent = ((to - YEAR_MIN) / (YEAR_MAX - YEAR_MIN)) * 100
+  // Dá prioridade de z-index ao thumb mais próximo do fim, pra não ficar preso atrás do outro.
+  const fromOnTop = from > YEAR_MIN + (YEAR_MAX - YEAR_MIN) / 2
+
   return (
-    <div className="flex items-end gap-2">
-      <label className="flex flex-col gap-0.5">
-        <span className="text-[10px] font-medium tracking-wide text-ink-muted uppercase">{fromLabel}</span>
-        <input
-          type="number"
-          inputMode="decimal"
-          value={fromValue}
-          onChange={(event) => onFromChange(event.target.value)}
-          min={min}
-          max={max}
-          step={step}
-          className={`${inputClass} w-20`}
+    <div className="flex w-full flex-col gap-2">
+      <div className="flex items-center justify-between text-xs font-medium text-ink">
+        <span>{from}</span>
+        <span>{to}</span>
+      </div>
+      <div className="relative h-4">
+        <div className="absolute top-1/2 h-1 w-full -translate-y-1/2 rounded-full bg-border" />
+        <div
+          className="absolute top-1/2 h-1 -translate-y-1/2 rounded-full bg-accent"
+          style={{ left: `${fromPercent}%`, right: `${100 - toPercent}%` }}
         />
-      </label>
-      <span className="pb-2 text-ink-muted">–</span>
-      <label className="flex flex-col gap-0.5">
-        <span className="text-[10px] font-medium tracking-wide text-ink-muted uppercase">{toLabel}</span>
         <input
-          type="number"
-          inputMode="decimal"
-          value={toValue}
-          onChange={(event) => onToChange(event.target.value)}
-          min={min}
-          max={max}
-          step={step}
-          className={`${inputClass} w-20`}
+          type="range"
+          aria-label="Ano de lançamento mínimo"
+          min={YEAR_MIN}
+          max={YEAR_MAX}
+          value={from}
+          onChange={(event) => handleFromChange(Number(event.target.value))}
+          className={`${sliderThumbClass} ${fromOnTop ? 'z-20' : 'z-10'}`}
         />
-      </label>
+        <input
+          type="range"
+          aria-label="Ano de lançamento máximo"
+          min={YEAR_MIN}
+          max={YEAR_MAX}
+          value={to}
+          onChange={(event) => handleToChange(Number(event.target.value))}
+          className={`${sliderThumbClass} ${fromOnTop ? 'z-10' : 'z-20'}`}
+        />
+      </div>
+    </div>
+  )
+}
+
+const RATING_MIN = 0
+const RATING_MAX = 10
+const RATING_STEP = 0.5
+
+const singleThumbClass =
+  'absolute inset-y-0 w-full cursor-pointer appearance-none bg-transparent ' +
+  '[&::-webkit-slider-runnable-track]:appearance-none [&::-moz-range-track]:appearance-none ' +
+  '[&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:appearance-none ' +
+  '[&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-accent ' +
+  '[&::-webkit-slider-thumb]:bg-surface [&::-webkit-slider-thumb]:shadow-sm [&::-webkit-slider-thumb]:cursor-pointer ' +
+  '[&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:rounded-full ' +
+  '[&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-accent [&::-moz-range-thumb]:bg-surface [&::-moz-range-thumb]:shadow-sm ' +
+  '[&::-moz-range-thumb]:cursor-pointer'
+
+interface RatingMinSliderProps {
+  value: string
+  onChange: (value: string) => void
+}
+
+function RatingMinSlider({ value, onChange }: RatingMinSliderProps) {
+  const numericValue = value === '' ? RATING_MIN : Number(value)
+
+  function handleChange(nextValue: number) {
+    onChange(nextValue <= RATING_MIN ? '' : String(nextValue))
+  }
+
+  const percent = ((numericValue - RATING_MIN) / (RATING_MAX - RATING_MIN)) * 100
+
+  return (
+    <div className="flex w-full flex-col gap-2">
+      <span className="text-xs font-medium text-ink">
+        {numericValue === RATING_MIN ? 'Todas as notas' : `A partir de ${numericValue}`}
+      </span>
+      <div className="relative h-4">
+        <div className="absolute top-1/2 h-1 w-full -translate-y-1/2 rounded-full bg-border" />
+        <div
+          className="absolute top-1/2 h-1 -translate-y-1/2 rounded-full bg-accent"
+          style={{ width: `${percent}%` }}
+        />
+        <input
+          type="range"
+          aria-label="Nota mínima"
+          min={RATING_MIN}
+          max={RATING_MAX}
+          step={RATING_STEP}
+          value={numericValue}
+          onChange={(event) => handleChange(Number(event.target.value))}
+          className={singleThumbClass}
+        />
+      </div>
     </div>
   )
 }
@@ -115,7 +191,7 @@ function GenreCombobox({ genres, selectedGenreIds, onToggleGenre }: GenreCombobo
         onClick={() => setOpen((current) => !current)}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className={`flex w-48 items-center justify-between gap-2 rounded-md border border-border bg-surface px-3 py-1.5 text-sm ${focusRingClass}`}
+        className={`flex w-full items-center justify-between gap-2 rounded-md border border-border bg-surface px-3 py-1.5 text-sm ${focusRingClass}`}
       >
         <span className={selectedGenreIds.length === 0 ? 'text-ink-muted' : 'text-ink'}>{summary}</span>
         <CaretDown size={14} className="shrink-0 text-ink-muted" />
@@ -124,7 +200,7 @@ function GenreCombobox({ genres, selectedGenreIds, onToggleGenre }: GenreCombobo
         <ul
           role="listbox"
           aria-multiselectable="true"
-          className="absolute top-full left-0 z-10 mt-1 max-h-64 w-56 overflow-y-auto rounded-md border border-border bg-surface py-1 shadow-md"
+          className="absolute top-full left-0 z-10 mt-1 max-h-64 w-full min-w-56 overflow-y-auto rounded-md border border-border bg-surface py-1 shadow-md"
         >
           {genres === null && <li className="px-3 py-1.5 text-sm text-ink-muted">Carregando...</li>}
           {genres?.map((genre) => {
@@ -202,7 +278,7 @@ function DirectorFilter({ value, onChange }: DirectorFilterProps) {
         }}
         placeholder="Buscar diretor..."
         aria-label="Filtrar por diretor"
-        className={`${inputClass} w-48`}
+        className={inputClass}
       />
       {showSuggestions && visibleSuggestions.length > 0 && (
         <ul className="absolute top-full left-0 z-10 mt-1 w-full min-w-max rounded-md border border-border bg-surface py-1 shadow-md">
@@ -234,9 +310,7 @@ export interface FilterBarProps {
   onYearFromChange: (value: string) => void
   onYearToChange: (value: string) => void
   ratingMin: string
-  ratingMax: string
   onRatingMinChange: (value: string) => void
-  onRatingMaxChange: (value: string) => void
   hasActiveFilters: boolean
   onClear: () => void
 }
@@ -252,54 +326,40 @@ function FilterBar({
   onYearFromChange,
   onYearToChange,
   ratingMin,
-  ratingMax,
   onRatingMinChange,
-  onRatingMaxChange,
   hasActiveFilters,
   onClear,
 }: FilterBarProps) {
   return (
-    <div className="flex flex-wrap items-end gap-4">
-      <FilterGroup label="Gêneros">
-        <GenreCombobox genres={genres} selectedGenreIds={selectedGenreIds} onToggleGenre={onToggleGenre} />
-      </FilterGroup>
+    <div className="flex flex-col gap-4">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <FilterGroup label="Gêneros">
+          <GenreCombobox genres={genres} selectedGenreIds={selectedGenreIds} onToggleGenre={onToggleGenre} />
+        </FilterGroup>
 
-      <FilterGroup label="Diretor">
-        <DirectorFilter value={director} onChange={onDirectorChange} />
-      </FilterGroup>
+        <FilterGroup label="Diretor">
+          <DirectorFilter value={director} onChange={onDirectorChange} />
+        </FilterGroup>
 
-      <FilterGroup label="Ano de lançamento">
-        <RangeInputs
-          fromValue={yearFrom}
-          toValue={yearTo}
-          onFromChange={onYearFromChange}
-          onToChange={onYearToChange}
-          fromLabel="De"
-          toLabel="Até"
-          min={1888}
-          max={2100}
-        />
-      </FilterGroup>
+        <FilterGroup label="Ano de lançamento">
+          <YearRangeSlider
+            fromValue={yearFrom}
+            toValue={yearTo}
+            onFromChange={onYearFromChange}
+            onToChange={onYearToChange}
+          />
+        </FilterGroup>
 
-      <FilterGroup label="Nota média (0-10)">
-        <RangeInputs
-          fromValue={ratingMin}
-          toValue={ratingMax}
-          onFromChange={onRatingMinChange}
-          onToChange={onRatingMaxChange}
-          fromLabel="De"
-          toLabel="Até"
-          min={0}
-          max={10}
-          step={0.5}
-        />
-      </FilterGroup>
+        <FilterGroup label="Nota mínima (0-10)">
+          <RatingMinSlider value={ratingMin} onChange={onRatingMinChange} />
+        </FilterGroup>
+      </div>
 
       {hasActiveFilters && (
         <button
           type="button"
           onClick={onClear}
-          className={`rounded-md px-3 py-1.5 text-sm font-medium text-ink underline decoration-accent decoration-2 underline-offset-2 hover:decoration-accent-hover ${focusRingClass}`}
+          className={`self-start rounded-md px-3 py-1.5 text-sm font-medium text-ink underline decoration-accent decoration-2 underline-offset-2 hover:decoration-accent-hover ${focusRingClass}`}
         >
           Limpar filtros
         </button>

@@ -10,22 +10,40 @@ import { translateGenreName } from '../utils/genreLabels'
 const STATUS_OPTIONS = ['Planejado', 'Em Produção', 'Pós-Produção', 'Lançado']
 
 const inputClass =
-  'w-full rounded-md border border-border bg-surface px-3 py-2 text-sm text-ink focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none'
+  'w-full rounded-md border border-zinc-400 bg-surface px-3 py-2 text-sm text-ink focus:border-accent-hover focus:outline-none focus:ring-2 focus:ring-ink'
 
 interface FieldProps {
   label: string
   htmlFor: string
+  error?: string
   children: React.ReactNode
 }
 
-function Field({ label, htmlFor, children }: FieldProps) {
+function Field({ label, htmlFor, error, children }: FieldProps) {
   return (
     <div className="flex flex-col gap-1">
       <label htmlFor={htmlFor} className="text-sm font-medium text-ink">
         {label}
       </label>
       {children}
+      <p id={`${htmlFor}-error`} className={`min-h-4 text-xs ${error ? 'text-destructive' : 'invisible'}`}>
+        {error ?? 'placeholder'}
+      </p>
     </div>
+  )
+}
+
+interface FormSectionProps {
+  title: string
+  children: React.ReactNode
+}
+
+function FormSection({ title, children }: FormSectionProps) {
+  return (
+    <section className="rounded-md border border-border bg-surface p-6">
+      <h2 className="border-b border-border pb-3 text-base font-semibold text-ink">{title}</h2>
+      <div className="mt-4 flex flex-col gap-4">{children}</div>
+    </section>
   )
 }
 
@@ -41,9 +59,9 @@ function ImagePreview({ url, alt, containerClassName }: ImagePreviewProps) {
   if (!url.trim()) return null
 
   return (
-    <div className={`mt-2 overflow-hidden rounded-md border border-border bg-zinc-100 ${containerClassName}`}>
+    <div className={`mt-2 overflow-hidden rounded-md border border-border bg-surface-muted ${containerClassName}`}>
       {failed ? (
-        <div className="flex h-full w-full items-center justify-center text-zinc-300">
+        <div className="flex h-full w-full items-center justify-center text-ink-muted/40">
           <FilmSlate size={28} weight="light" />
         </div>
       ) : (
@@ -117,10 +135,26 @@ interface MovieFormProps {
   onSuccess: (movie: MovieDetail) => void
 }
 
+type ValidatedField = 'titulo' | 'url_poster' | 'url_backdrop'
+
+function validateField(field: ValidatedField, value: string): string | undefined {
+  if (field === 'titulo') {
+    return value.trim() ? undefined : 'Título é obrigatório.'
+  }
+  if (!value.trim()) return undefined
+  try {
+    new URL(value)
+    return undefined
+  } catch {
+    return 'Informe uma URL válida.'
+  }
+}
+
 function MovieForm({ initialValues, submitLabel, onSubmit, onSuccess }: MovieFormProps) {
   const [values, setValues] = useState<MovieFormValues>(() => toFormValues(initialValues))
   const [genres, setGenres] = useState<Genre[] | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<ValidatedField, string>>>({})
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
@@ -131,6 +165,13 @@ function MovieForm({ initialValues, submitLabel, onSubmit, onSuccess }: MovieFor
 
   function updateField<K extends keyof MovieFormValues>(field: K, value: MovieFormValues[K]) {
     setValues((current) => ({ ...current, [field]: value }))
+    if (field === 'titulo' || field === 'url_poster' || field === 'url_backdrop') {
+      setFieldErrors((current) => ({ ...current, [field as ValidatedField]: undefined }))
+    }
+  }
+
+  function handleFieldBlur(field: ValidatedField) {
+    setFieldErrors((current) => ({ ...current, [field]: validateField(field, values[field]) }))
   }
 
   function handleDateChange(value: string) {
@@ -153,6 +194,15 @@ function MovieForm({ initialValues, submitLabel, onSubmit, onSuccess }: MovieFor
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError(null)
+
+    const nextFieldErrors: Partial<Record<ValidatedField, string>> = {
+      titulo: validateField('titulo', values.titulo),
+      url_poster: validateField('url_poster', values.url_poster),
+      url_backdrop: validateField('url_backdrop', values.url_backdrop),
+    }
+    setFieldErrors(nextFieldErrors)
+    if (Object.values(nextFieldErrors).some(Boolean)) return
+
     setSubmitting(true)
     try {
       const movie = await onSubmit(toMovieInput(values))
@@ -165,149 +215,163 @@ function MovieForm({ initialValues, submitLabel, onSubmit, onSuccess }: MovieFor
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex max-w-2xl flex-col gap-5">
-      <Field label="Título" htmlFor="titulo">
-        <input
-          id="titulo"
-          type="text"
-          required
-          maxLength={500}
-          value={values.titulo}
-          onChange={(event) => updateField('titulo', event.target.value)}
-          className={`${inputClass} max-w-lg`}
-        />
-      </Field>
-
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-        <Field label="Ano" htmlFor="ano_lancamento">
+    <form onSubmit={handleSubmit} className="mx-auto flex max-w-3xl flex-col gap-6">
+      <FormSection title="Informações gerais">
+        <Field label="Título" htmlFor="titulo" error={fieldErrors.titulo}>
           <input
-            id="ano_lancamento"
-            type="number"
-            min={1888}
-            max={2100}
-            value={values.ano_lancamento}
-            onChange={(event) => updateField('ano_lancamento', event.target.value)}
+            id="titulo"
+            type="text"
+            aria-required="true"
+            aria-invalid={Boolean(fieldErrors.titulo)}
+            aria-describedby="titulo-error"
+            maxLength={500}
+            value={values.titulo}
+            onChange={(event) => updateField('titulo', event.target.value)}
+            onBlur={() => handleFieldBlur('titulo')}
             className={inputClass}
           />
         </Field>
-        <Field label="Data de lançamento" htmlFor="data_lancamento">
-          <input
-            id="data_lancamento"
-            type="date"
-            value={values.data_lancamento}
-            onChange={(event) => handleDateChange(event.target.value)}
+
+        <Field label="Sinopse" htmlFor="sinopse">
+          <textarea
+            id="sinopse"
+            rows={4}
+            maxLength={4000}
+            value={values.sinopse}
+            onChange={(event) => updateField('sinopse', event.target.value)}
             className={inputClass}
           />
         </Field>
-        <Field label="Duração (min)" htmlFor="duracao_minutos">
-          <input
-            id="duracao_minutos"
-            type="number"
-            min={0}
-            value={values.duracao_minutos}
-            onChange={(event) => updateField('duracao_minutos', event.target.value)}
-            className={inputClass}
-          />
-        </Field>
-      </div>
 
-      <Field label="Status" htmlFor="status_filme">
-        <select
-          id="status_filme"
-          value={values.status_filme}
-          onChange={(event) => updateField('status_filme', event.target.value)}
-          className={inputClass}
-        >
-          <option value="">Não informado</option>
-          {STATUS_OPTIONS.map((status) => (
-            <option key={status} value={status}>
-              {status}
-            </option>
-          ))}
-        </select>
-      </Field>
-
-      <Field label="Sinopse" htmlFor="sinopse">
-        <textarea
-          id="sinopse"
-          rows={4}
-          maxLength={4000}
-          value={values.sinopse}
-          onChange={(event) => updateField('sinopse', event.target.value)}
-          className={inputClass}
-        />
-      </Field>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="URL do pôster" htmlFor="url_poster">
-          <input
-            id="url_poster"
-            type="url"
-            value={values.url_poster}
-            onChange={(event) => updateField('url_poster', event.target.value)}
-            className={inputClass}
-          />
-          <ImagePreview
-            key={values.url_poster}
-            url={values.url_poster}
-            alt="Pré-visualização do pôster"
-            containerClassName="aspect-2/3 w-28"
-          />
-        </Field>
-        <Field label="URL do backdrop" htmlFor="url_backdrop">
-          <input
-            id="url_backdrop"
-            type="url"
-            value={values.url_backdrop}
-            onChange={(event) => updateField('url_backdrop', event.target.value)}
-            className={inputClass}
-          />
-          <ImagePreview
-            key={values.url_backdrop}
-            url={values.url_backdrop}
-            alt="Pré-visualização do backdrop"
-            containerClassName="aspect-video w-48"
-          />
-        </Field>
-      </div>
-
-      <Field label="Diretor" htmlFor="diretor">
-        <input
-          id="diretor"
-          type="text"
-          maxLength={255}
-          value={values.diretor}
-          onChange={(event) => updateField('diretor', event.target.value)}
-          className={inputClass}
-        />
-      </Field>
-
-      <div>
-        <span className="text-sm font-medium text-ink">Gêneros</span>
-        <p className="mt-0.5 text-xs text-ink-muted">Selecione um ou mais gêneros.</p>
-        <div className="mt-2 flex flex-wrap gap-2">
-          {genres === null && <span className="text-sm text-ink-muted">Carregando...</span>}
-          {genres?.map((genre) => {
-            const selected = values.genre_ids.includes(genre.sk_genre_id)
-            return (
-              <button
-                key={genre.sk_genre_id}
-                type="button"
-                aria-pressed={selected}
-                onClick={() => toggleGenre(genre.sk_genre_id)}
-                className={`flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${focusRingClass} ${
-                  selected
-                    ? 'border-accent bg-accent text-ink'
-                    : 'border-border text-ink-muted hover:border-accent'
-                }`}
-              >
-                {selected && <Check size={12} />}
-                {translateGenreName(genre.nome_genero)}
-              </button>
-            )
-          })}
+        <div>
+          <span className="text-sm font-medium text-ink">Gêneros</span>
+          <p className="mt-0.5 text-xs text-ink-muted">Selecione um ou mais gêneros.</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {genres === null && <span className="text-sm text-ink-muted">Carregando...</span>}
+            {genres?.map((genre) => {
+              const selected = values.genre_ids.includes(genre.sk_genre_id)
+              return (
+                <button
+                  key={genre.sk_genre_id}
+                  type="button"
+                  aria-pressed={selected}
+                  onClick={() => toggleGenre(genre.sk_genre_id)}
+                  className={`flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${focusRingClass} ${
+                    selected
+                      ? 'border-accent bg-accent text-ink'
+                      : 'border-border text-ink-muted hover:border-accent'
+                  }`}
+                >
+                  {selected && <Check size={12} />}
+                  {translateGenreName(genre.nome_genero)}
+                </button>
+              )
+            })}
+          </div>
         </div>
-      </div>
+
+        <Field label="Diretor" htmlFor="diretor">
+          <input
+            id="diretor"
+            type="text"
+            maxLength={255}
+            value={values.diretor}
+            onChange={(event) => updateField('diretor', event.target.value)}
+            className={inputClass}
+          />
+        </Field>
+      </FormSection>
+
+      <FormSection title="Detalhes de lançamento">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <Field label="Ano" htmlFor="ano_lancamento">
+            <input
+              id="ano_lancamento"
+              type="number"
+              min={1888}
+              max={2100}
+              value={values.ano_lancamento}
+              onChange={(event) => updateField('ano_lancamento', event.target.value)}
+              className={inputClass}
+            />
+          </Field>
+          <Field label="Data de lançamento" htmlFor="data_lancamento">
+            <input
+              id="data_lancamento"
+              type="date"
+              value={values.data_lancamento}
+              onChange={(event) => handleDateChange(event.target.value)}
+              className={inputClass}
+            />
+          </Field>
+          <Field label="Duração (min)" htmlFor="duracao_minutos">
+            <input
+              id="duracao_minutos"
+              type="number"
+              min={0}
+              value={values.duracao_minutos}
+              onChange={(event) => updateField('duracao_minutos', event.target.value)}
+              className={inputClass}
+            />
+          </Field>
+          <Field label="Status" htmlFor="status_filme">
+            <select
+              id="status_filme"
+              value={values.status_filme}
+              onChange={(event) => updateField('status_filme', event.target.value)}
+              className={inputClass}
+            >
+              <option value="">Não informado</option>
+              {STATUS_OPTIONS.map((status) => (
+                <option key={status} value={status}>
+                  {status}
+                </option>
+              ))}
+            </select>
+          </Field>
+        </div>
+      </FormSection>
+
+      <FormSection title="Multimédia">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="URL do pôster" htmlFor="url_poster" error={fieldErrors.url_poster}>
+            <input
+              id="url_poster"
+              type="url"
+              aria-invalid={Boolean(fieldErrors.url_poster)}
+              aria-describedby="url_poster-error"
+              value={values.url_poster}
+              onChange={(event) => updateField('url_poster', event.target.value)}
+              onBlur={() => handleFieldBlur('url_poster')}
+              className={inputClass}
+            />
+            <ImagePreview
+              key={values.url_poster}
+              url={values.url_poster}
+              alt="Pré-visualização do pôster"
+              containerClassName="aspect-2/3 w-28"
+            />
+          </Field>
+          <Field label="URL do backdrop" htmlFor="url_backdrop" error={fieldErrors.url_backdrop}>
+            <input
+              id="url_backdrop"
+              type="url"
+              aria-invalid={Boolean(fieldErrors.url_backdrop)}
+              aria-describedby="url_backdrop-error"
+              value={values.url_backdrop}
+              onChange={(event) => updateField('url_backdrop', event.target.value)}
+              onBlur={() => handleFieldBlur('url_backdrop')}
+              className={inputClass}
+            />
+            <ImagePreview
+              key={values.url_backdrop}
+              url={values.url_backdrop}
+              alt="Pré-visualização do backdrop"
+              containerClassName="aspect-video w-48"
+            />
+          </Field>
+        </div>
+      </FormSection>
 
       {error && <p className="text-sm text-destructive">{error}</p>}
 

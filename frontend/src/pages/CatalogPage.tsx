@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { listMovies } from '../api/movies'
 import { listGenres } from '../api/genres'
 import { ApiError } from '../api/client'
+import ActiveFilterChips from '../components/ActiveFilterChips'
 import FilterBar from '../components/FilterBar'
 import MovieCard, { MovieCardSkeleton } from '../components/MovieCard'
 import Pagination from '../components/Pagination'
@@ -21,7 +22,6 @@ interface TextFilters {
   yearFrom: string
   yearTo: string
   ratingMin: string
-  ratingMax: string
 }
 
 const EMPTY_TEXT_FILTERS: TextFilters = {
@@ -30,7 +30,6 @@ const EMPTY_TEXT_FILTERS: TextFilters = {
   yearFrom: '',
   yearTo: '',
   ratingMin: '',
-  ratingMax: '',
 }
 
 interface CatalogData {
@@ -41,7 +40,7 @@ interface CatalogData {
 
 function CatalogGrid({ children }: { children: React.ReactNode }) {
   return (
-    <div className="grid grid-cols-2 gap-5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+    <div className="grid grid-cols-2 gap-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
       {children}
     </div>
   )
@@ -97,7 +96,6 @@ function CatalogPage() {
       year_from: textFilters.yearFrom ? Number(textFilters.yearFrom) : undefined,
       year_to: textFilters.yearTo ? Number(textFilters.yearTo) : undefined,
       rating_min: textFilters.ratingMin ? Number(textFilters.ratingMin) : undefined,
-      rating_max: textFilters.ratingMax ? Number(textFilters.ratingMax) : undefined,
       sort,
       order,
     })
@@ -156,7 +154,7 @@ function CatalogPage() {
     (genreIds.length > 0 ? 1 : 0) +
     (textInput.director !== '' ? 1 : 0) +
     (textInput.yearFrom !== '' || textInput.yearTo !== '' ? 1 : 0) +
-    (textInput.ratingMin !== '' || textInput.ratingMax !== '' ? 1 : 0)
+    (textInput.ratingMin !== '' ? 1 : 0)
 
   // Deriva o carregamento comparando os parâmetros já carregados com os atuais,
   // em vez de resetar `data` sincronamente no efeito (sem re-render extra).
@@ -167,9 +165,7 @@ function CatalogPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-semibold text-ink">Catálogo</h1>
-
-      <div className="mt-4 rounded-md border border-border bg-surface p-4">
+      <div className="rounded-md bg-surface p-4 shadow-[0_1px_2px_rgba(28,25,23,0.04),0_8px_20px_-6px_rgba(28,25,23,0.08)] ring-1 ring-black/5">
         <div className="flex flex-wrap items-center gap-3">
           <SearchBar value={textInput.q} onChange={(value) => updateTextFilter('q', value)} />
           <div className="ml-auto flex flex-wrap items-center gap-3">
@@ -195,6 +191,25 @@ function CatalogPage() {
           </div>
         </div>
 
+        {advancedFilterCount > 0 && (
+          <div className="mt-3">
+            <ActiveFilterChips
+              genres={genres}
+              selectedGenreIds={genreIds}
+              onToggleGenre={toggleGenre}
+              director={textInput.director}
+              onDirectorChange={(value) => updateTextFilter('director', value)}
+              yearFrom={textInput.yearFrom}
+              yearTo={textInput.yearTo}
+              onYearFromChange={(value) => updateTextFilter('yearFrom', value)}
+              onYearToChange={(value) => updateTextFilter('yearTo', value)}
+              ratingMin={textInput.ratingMin}
+              onRatingMinChange={(value) => updateTextFilter('ratingMin', value)}
+              onClearAll={clearFilters}
+            />
+          </div>
+        )}
+
         {filtersOpen && (
           <div className="mt-4 border-t border-border pt-4">
             <FilterBar
@@ -208,9 +223,7 @@ function CatalogPage() {
               onYearFromChange={(value) => updateTextFilter('yearFrom', value)}
               onYearToChange={(value) => updateTextFilter('yearTo', value)}
               ratingMin={textInput.ratingMin}
-              ratingMax={textInput.ratingMax}
               onRatingMinChange={(value) => updateTextFilter('ratingMin', value)}
-              onRatingMaxChange={(value) => updateTextFilter('ratingMax', value)}
               hasActiveFilters={hasActiveFilters}
               onClear={clearFilters}
             />
@@ -239,6 +252,9 @@ function CatalogPage() {
 
         {!error && movies !== null && movies.length > 0 && (
           <>
+            <p className="mb-3 text-sm text-ink-muted">
+              {data.total.toLocaleString('pt-BR')} {data.total === 1 ? 'filme encontrado' : 'filmes encontrados'}
+            </p>
             <CatalogGrid>
               {movies.map((movie) => (
                 <MovieCard key={movie.sk_movie_id} movie={movie} />

@@ -6,11 +6,12 @@ description: Internal admin panel for managing a movie catalog and its reviews
 colors:
   accent: "#f59e0b"
   accent-hover: "#d97706"
-  neutral-bg: "#fafafa"
+  neutral-bg: "#f5f2ec"
   neutral-surface: "#ffffff"
-  neutral-border: "#e4e4e7"
-  neutral-text: "#18181b"
-  neutral-text-muted: "#71717a"
+  neutral-surface-muted: "#eee9df"
+  neutral-border: "#e3ddd0"
+  neutral-text: "#1c1917"
+  neutral-text-muted: "#78716c"
   destructive: "#dc2626"
   success: "#059669"
 typography:
@@ -46,8 +47,13 @@ requirement in the MVP, no external font dependency, no 5-star iconography (the 
 numeric 0-10, not 1-5 stars - see PRODUCT.md).
 
 **Key Characteristics:**
-- Neutral zinc surfaces with a single warm amber accent, used consistently everywhere (buttons,
-  links, active states, rating emphasis) rather than scattered accent colors.
+- Warm stone surfaces (not cool zinc) with a single amber accent, used consistently everywhere
+  (buttons, links, active states, rating emphasis) rather than scattered accent colors. The page
+  background sits visibly warmer/deeper than card surfaces so elevated content actually reads as
+  elevated, instead of white-on-white.
+- Cards and panels carry a soft, tinted shadow (never pure black) rather than relying on a border
+  alone - revised from the original all-flat "ledger" concept after the restraint read as bland
+  in practice; see Elevation & Depth below.
 - System font stack only - zero web-font dependency, instant render.
 - One corner-radius scale throughout, with pill shape reserved for badges/tags only.
 - Motion exists but is restrained and purposeful (Emil Kowalski principles): short, eased
@@ -56,20 +62,22 @@ numeric 0-10, not 1-5 stars - see PRODUCT.md).
 
 ## Colors
 
-Restrained strategy: one neutral family (Zinc) carries the whole surface, one accent (Amber)
-carries every actionable and rating-related emphasis, and two semantic colors (red, emerald)
-are reserved strictly for destructive/success feedback, never used as decoration.
+Restrained strategy: one neutral family (warm Stone) carries the whole surface, one accent
+(Amber) carries every actionable and rating-related emphasis, and two semantic colors (red,
+emerald) are reserved strictly for destructive/success feedback, never used as decoration.
 
 ### Primary
 - **Amber** (`#f59e0b`, hover `#d97706`): primary buttons, links, active nav state, star/rating
   emphasis, focus rings. Used identically across every screen (Color Consistency Lock).
 
 ### Neutral
-- **Paper** (`#fafafa`): page background.
+- **Paper** (`#f5f2ec`): page background - warm ivory, deliberately deeper than Surface so cards
+  visually sit on top of it.
 - **Surface** (`#ffffff`): cards, modals, form panels.
-- **Border** (`#e4e4e7`): dividers, card outlines, input borders at rest.
-- **Ink** (`#18181b`): primary text.
-- **Ink Muted** (`#71717a`): secondary text, helper text, metadata (year, review count).
+- **Surface Muted** (`#eee9df`): poster/image placeholders, skeleton loading blocks.
+- **Border** (`#e3ddd0`): dividers, input borders at rest.
+- **Ink** (`#1c1917`): primary text.
+- **Ink Muted** (`#78716c`): secondary text, helper text, metadata (year, review count).
 
 ### Named Rules
 **The One Accent Rule.** Amber is the only brand accent on the page. Destructive (red) and
@@ -98,9 +106,14 @@ Tailwind's default (`spacing.sm/md/lg` above map to `2/4/6`); section padding st
 
 ## Elevation & Depth
 
-Flat by default. Cards are distinguished by a 1px `neutral-border` outline, not a shadow.
-Modals/dialogs get a single soft shadow layer to read as genuinely elevated above the page;
-everything else stays flat.
+Revised from the original all-flat spec: movie cards and floating panels (the catalog search/
+filter bar) carry a soft, two-layer shadow tinted from Ink rather than pure black
+(`rgba(28,25,23,…)`), plus a hairline `ring-black/5` for a crisp edge - never a `neutral-border`
+outline alone. Cards lift further on hover/focus (deeper shadow, slight upward translate, ring
+tinted Amber) as interactive feedback. Modals/dialogs keep their own single, more pronounced
+shadow layer to still read as the most elevated layer on the page. Static, non-interactive text
+and inline controls (labels, plain body copy) stay flat; shadow is reserved for surfaces the user
+scans or clicks into (cards, panels, modals), not for decoration.
 
 ## Shapes
 
@@ -124,4 +137,8 @@ elsewhere.
 - **Don't** mix Tailwind utilities with hand-written CSS files - Tailwind only, per the user's
   explicit constraint.
 - **Don't** add dark mode in the MVP; it's an explicit phase-2 item, not silently in scope.
-- **Don't** use card shadows at rest; reserve shadow for modals only.
+- **Don't** use a pure-black shadow, or a zero-offset/zero-blur shadow - always the tinted,
+  soft two-layer treatment described in Elevation & Depth.
+- **Don't** let Paper and Surface sit at near-identical lightness again - the contrast between
+  them is what makes elevation legible; if a future palette tweak narrows that gap, cards will
+  read flat again regardless of the shadow.

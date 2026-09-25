@@ -100,11 +100,11 @@ function MetricsSection({ movie }: { movie: MovieDetail }) {
 function MovieDetailSkeleton() {
   return (
     <div className="flex flex-col gap-6 sm:flex-row">
-      <div className="aspect-2/3 w-full max-w-56 animate-pulse rounded-md bg-zinc-100" />
+      <div className="aspect-2/3 w-full max-w-56 animate-pulse rounded-md bg-surface-muted" />
       <div className="flex flex-1 flex-col gap-3">
-        <div className="h-7 w-2/3 animate-pulse rounded bg-zinc-100" />
-        <div className="h-4 w-1/3 animate-pulse rounded bg-zinc-100" />
-        <div className="h-20 w-full animate-pulse rounded bg-zinc-100" />
+        <div className="h-7 w-2/3 animate-pulse rounded bg-surface-muted" />
+        <div className="h-4 w-1/3 animate-pulse rounded bg-surface-muted" />
+        <div className="h-20 w-full animate-pulse rounded bg-surface-muted" />
       </div>
     </div>
   )
@@ -213,7 +213,7 @@ function MovieDetailPage() {
       </div>
 
       <div className="mt-4 flex flex-col gap-6 sm:flex-row">
-        <div className="aspect-2/3 w-full max-w-56 shrink-0 overflow-hidden rounded-md border border-border bg-zinc-100">
+        <div className="aspect-2/3 w-full max-w-56 shrink-0 overflow-hidden rounded-md border border-border bg-surface-muted">
           {movie.url_poster ? (
             <img
               src={movie.url_poster}
@@ -221,7 +221,7 @@ function MovieDetailPage() {
               className="h-full w-full object-cover"
             />
           ) : (
-            <div className="flex h-full w-full items-center justify-center text-zinc-300">
+            <div className="flex h-full w-full items-center justify-center text-ink-muted/40">
               <FilmSlate size={56} weight="light" />
             </div>
           )}

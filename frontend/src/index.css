@@ -1,17 +1,18 @@
 @import "tailwindcss";
 
-/* Tokens from DESIGN.md — Operate-mode admin tool. Zinc neutrals + one amber accent. */
+/* Tokens from DESIGN.md — Operate-mode admin tool. Warm stone neutrals + one amber accent. */
 @theme {
   --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial,
     sans-serif;
 
   --color-accent: #f59e0b;
   --color-accent-hover: #d97706;
-  --color-paper: #fafafa;
+  --color-paper: #f5f2ec;
   --color-surface: #ffffff;
-  --color-border: #e4e4e7;
-  --color-ink: #18181b;
-  --color-ink-muted: #71717a;
+  --color-surface-muted: #eee9df;
+  --color-border: #e3ddd0;
+  --color-ink: #1c1917;
+  --color-ink-muted: #78716c;
   --color-destructive: #dc2626;
   --color-success: #059669;
 
