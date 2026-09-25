@@ -16,6 +16,7 @@ import type { Genre, MovieListItem, MovieSort, SortOrder } from '../types/movie'
 
 const PAGE_SIZE = 20
 const SEARCH_DEBOUNCE_MS = 400
+const FILTERS_TRANSITION_MS = 300
 
 interface TextFilters {
   q: string
@@ -69,6 +70,7 @@ function CatalogPage() {
   const [data, setData] = useState<CatalogData | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [filtersOpen, setFiltersOpen] = useState(false)
+  const [filtersExpanded, setFiltersExpanded] = useState(false)
   const lastNonPageKeyRef = useRef<string | null>(null)
 
   useEffect(() => {
@@ -76,6 +78,25 @@ function CatalogPage() {
       .then(setGenres)
       .catch(() => setGenres([]))
   }, [])
+
+  // O painel de filtros usa a técnica de animar grid-template-rows de 0fr pra 1fr, que exige
+  // overflow-hidden no wrapper durante a transição pra "encolher" de verdade. Isso corta
+  // dropdowns internos (ex.: combobox de gêneros) que ficam mais altos que o conteúdo. Por isso
+  // só liberamos o overflow depois que a transição de abertura termina (o fechamento reaplica o
+  // corte na hora, em toggleFilters, pra já estar ativo quando a transição de fechar começa).
+  useEffect(() => {
+    if (!filtersOpen) return
+    const timeoutId = setTimeout(() => setFiltersExpanded(true), FILTERS_TRANSITION_MS)
+    return () => clearTimeout(timeoutId)
+  }, [filtersOpen])
+
+  function toggleFilters() {
+    setFiltersOpen((current) => {
+      const next = !current
+      if (!next) setFiltersExpanded(false)
+      return next
+    })
+  }
 
   // Debounce: só promove textInput -> textFilters (o que de fato dispara a busca)
   // depois que o usuário para de digitar, e volta pra página 1.
@@ -133,11 +154,11 @@ function CatalogPage() {
     setTextInput((current) => ({ ...current, [field]: value }))
   }
 
-  // Usado pelos chips de filtro ativo: remove o valor confirmado (textFilters) na hora,
-  // em vez de esperar o debounce de digitação — o chip some assim que o X é clicado.
-  function clearConfirmedTextFilter(field: keyof TextFilters) {
-    setTextInput((current) => ({ ...current, [field]: '' }))
-    setTextFilters((current) => ({ ...current, [field]: '' }))
+  // Aplica um filtro de texto imediatamente, sem esperar o debounce de digitação: usado pelo
+  // chip "X" (remove na hora) e pela seleção de diretor no autocomplete (confirma na hora).
+  function setConfirmedTextFilter<K extends keyof TextFilters>(field: K, value: TextFilters[K]) {
+    setTextInput((current) => ({ ...current, [field]: value }))
+    setTextFilters((current) => ({ ...current, [field]: value }))
     setPage(1)
   }
 
@@ -192,7 +213,7 @@ function CatalogPage() {
             <SortControl sort={sort} order={order} onSortChange={changeSort} onOrderChange={changeOrder} />
             <button
               type="button"
-              onClick={() => setFiltersOpen((current) => !current)}
+              onClick={toggleFilters}
               aria-expanded={filtersOpen}
               className={`flex items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium ${pressableClass} ${focusRingClass} ${
                 filtersOpen
@@ -221,13 +242,13 @@ function CatalogPage() {
               selectedGenreIds={genreIds}
               onToggleGenre={toggleGenre}
               director={textFilters.director}
-              onDirectorChange={() => clearConfirmedTextFilter('director')}
+              onDirectorChange={() => setConfirmedTextFilter('director', '')}
               yearFrom={textFilters.yearFrom}
               yearTo={textFilters.yearTo}
-              onYearFromChange={() => clearConfirmedTextFilter('yearFrom')}
-              onYearToChange={() => clearConfirmedTextFilter('yearTo')}
+              onYearFromChange={() => setConfirmedTextFilter('yearFrom', '')}
+              onYearToChange={() => setConfirmedTextFilter('yearTo', '')}
               ratingMin={textFilters.ratingMin}
-              onRatingMinChange={() => clearConfirmedTextFilter('ratingMin')}
+              onRatingMinChange={() => setConfirmedTextFilter('ratingMin', '')}
               onClearAll={clearFilters}
             />
           </div>
@@ -238,7 +259,7 @@ function CatalogPage() {
             filtersOpen ? 'mt-4 grid-rows-[1fr]' : 'grid-rows-[0fr]'
           }`}
         >
-          <div className="min-h-0 overflow-hidden" inert={!filtersOpen}>
+          <div className={`min-h-0 ${filtersExpanded ? '' : 'overflow-hidden'}`} inert={!filtersOpen}>
             <div
               className={`border-t border-border pt-4 transition-opacity duration-200 motion-reduce:transition-none ${
                 filtersOpen ? 'opacity-100 delay-100' : 'opacity-0'
@@ -248,8 +269,8 @@ function CatalogPage() {
                 genres={genres}
                 selectedGenreIds={genreIds}
                 onToggleGenre={toggleGenre}
-                director={textInput.director}
-                onDirectorChange={(value) => updateTextFilter('director', value)}
+                director={textFilters.director}
+                onDirectorChange={(value) => setConfirmedTextFilter('director', value)}
                 yearFrom={textInput.yearFrom}
                 yearTo={textInput.yearTo}
                 onYearFromChange={(value) => updateTextFilter('yearFrom', value)}
