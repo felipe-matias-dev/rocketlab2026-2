@@ -1,5 +1,6 @@
 import { Funnel } from '@phosphor-icons/react'
 import { useEffect, useRef, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 
 import { listMovies } from '../api/movies'
 import { listGenres } from '../api/genres'
@@ -73,6 +74,24 @@ function CatalogPage() {
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [filtersExpanded, setFiltersExpanded] = useState(false)
   const lastNonPageKeyRef = useRef<string | null>(null)
+  const location = useLocation()
+  const [resetKey, setResetKey] = useState(location.key)
+
+  // O logo em Layout.tsx é um Link to="/", que é a própria rota do catálogo — clicar nele
+  // enquanto já se está aqui não remonta o componente (mesma rota), então o estado local de
+  // busca/filtro/ordenação não reseta sozinho. `location.key` muda a cada navegação, mesmo pra
+  // uma URL idêntica; comparamos com o último key visto e ajustamos o estado direto no render
+  // (padrão recomendado pelo React pra isso, em vez de um useEffect com setState em cascata).
+  if (location.key !== resetKey) {
+    setResetKey(location.key)
+    setTextInput(EMPTY_TEXT_FILTERS)
+    setTextFilters(EMPTY_TEXT_FILTERS)
+    setGenreIds([])
+    setSort('title')
+    setOrder('desc')
+    setPage(1)
+    setFiltersOpen(false)
+  }
 
   useEffect(() => {
     listGenres()
