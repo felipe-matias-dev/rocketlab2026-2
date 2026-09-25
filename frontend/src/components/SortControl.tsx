@@ -8,6 +8,7 @@ const SORT_OPTIONS: { value: MovieSort; label: string }[] = [
   { value: 'title', label: 'Título' },
   { value: 'popularity', label: 'Popularidade' },
   { value: 'rating', label: 'Nota média' },
+  { value: 'reviews_count', label: 'Nº de avaliações' },
   { value: 'recent', label: 'Adicionados recentemente' },
 ]
 

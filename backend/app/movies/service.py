@@ -21,7 +21,7 @@ from app.movies.schemas import MovieCreate, MovieUpdate, ReviewCreate
 
 MovieWithRating = tuple[DimMovie, float | None, int, float | None]
 
-MovieSort = Literal["title", "popularity", "rating", "recent"]
+MovieSort = Literal["title", "popularity", "rating", "recent", "reviews_count"]
 SortOrder = Literal["asc", "desc"]
 
 
@@ -103,6 +103,7 @@ async def list_movies(
         "popularity": FactMoviePerformance.popularidade,
         "rating": reviews_agg.c.nota_media,
         "recent": DimMovie.criado_em,
+        "reviews_count": func.coalesce(reviews_agg.c.qtd_avaliacoes, 0),
     }
     order_column = sort_columns[sort]
     order_clause = order_column.desc() if order == "desc" else order_column.asc()

@@ -38,7 +38,7 @@ export interface MovieListItem {
   popularidade: number | null
 }
 
-export type MovieSort = 'title' | 'popularity' | 'rating' | 'recent'
+export type MovieSort = 'title' | 'popularity' | 'rating' | 'recent' | 'reviews_count'
 export type SortOrder = 'asc' | 'desc'
 
 export interface MovieDetail {
