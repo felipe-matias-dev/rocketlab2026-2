@@ -5,6 +5,7 @@ import { listMovies } from '../api/movies'
 import { listGenres } from '../api/genres'
 import { ApiError } from '../api/client'
 import ActiveFilterChips from '../components/ActiveFilterChips'
+import FeaturedMovie from '../components/FeaturedMovie'
 import FilterBar from '../components/FilterBar'
 import MovieCard, { MovieCardSkeleton } from '../components/MovieCard'
 import Pagination from '../components/Pagination'
@@ -206,6 +207,8 @@ function CatalogPage() {
 
   return (
     <div>
+      <FeaturedMovie />
+
       <div className="rounded-md bg-surface p-4 shadow-[0_1px_2px_rgba(28,25,23,0.04),0_8px_20px_-6px_rgba(28,25,23,0.08)] ring-1 ring-black/5">
         <div className="flex flex-wrap items-center gap-3">
           <SearchBar value={textInput.q} onChange={(value) => updateTextFilter('q', value)} />
