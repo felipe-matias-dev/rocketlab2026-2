@@ -1,4 +1,5 @@
-import { FilmSlate, Star } from '@phosphor-icons/react'
+import { CircleNotch, FilmSlate, Star } from '@phosphor-icons/react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { focusRingClass } from '../styles/interactive'
@@ -16,6 +17,8 @@ const cardElevationClass =
   'hover:-translate-y-1 hover:shadow-[0_4px_8px_rgba(28,25,23,0.06),0_20px_32px_-8px_rgba(28,25,23,0.18)] hover:ring-accent/40'
 
 function MovieCard({ movie, entranceDelayMs }: MovieCardProps) {
+  const [posterLoaded, setPosterLoaded] = useState(false)
+  const [posterError, setPosterError] = useState(false)
   const entranceClass =
     entranceDelayMs !== undefined ? 'motion-safe:animate-fade-rise motion-reduce:animate-none' : ''
 
@@ -26,13 +29,22 @@ function MovieCard({ movie, entranceDelayMs }: MovieCardProps) {
       className={`group flex flex-col overflow-hidden rounded-md bg-surface ${cardElevationClass} ${entranceClass} ${focusRingClass}`}
     >
       <div className="relative aspect-2/3 w-full overflow-hidden bg-surface-muted">
-        {movie.url_poster ? (
-          <img
-            src={movie.url_poster}
-            alt={movie.titulo}
-            loading="lazy"
-            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-          />
+        {movie.url_poster && !posterError ? (
+          <>
+            {!posterLoaded && (
+              <div className="absolute inset-0 flex items-center justify-center" aria-hidden="true">
+                <CircleNotch size={28} weight="bold" className="text-ink-muted/40 motion-safe:animate-spin-fast" />
+              </div>
+            )}
+            <img
+              src={movie.url_poster}
+              alt={movie.titulo}
+              loading="lazy"
+              onLoad={() => setPosterLoaded(true)}
+              onError={() => setPosterError(true)}
+              className={`h-full w-full object-cover transition-[opacity,transform] duration-300 group-hover:scale-105 ${posterLoaded ? 'opacity-100' : 'opacity-0'}`}
+            />
+          </>
         ) : (
           <div className="flex h-full w-full items-center justify-center text-ink-muted/40">
             <FilmSlate size={40} weight="light" />
@@ -59,7 +71,14 @@ function MovieCard({ movie, entranceDelayMs }: MovieCardProps) {
 export function MovieCardSkeleton() {
   return (
     <div className="overflow-hidden rounded-md bg-surface shadow-[0_1px_2px_rgba(28,25,23,0.04),0_6px_16px_-4px_rgba(28,25,23,0.10)] ring-1 ring-black/5">
-      <div className="aspect-2/3 w-full animate-pulse bg-surface-muted" />
+      <div className="flex aspect-2/3 w-full animate-pulse items-center justify-center bg-surface-muted">
+        <CircleNotch
+          size={28}
+          weight="bold"
+          className="text-ink-muted/40 motion-safe:animate-spin-fast"
+          aria-hidden="true"
+        />
+      </div>
       <div className="space-y-2 p-3.5">
         <div className="h-3.5 w-4/5 animate-pulse rounded bg-surface-muted" />
         <div className="h-3 w-1/3 animate-pulse rounded bg-surface-muted" />
