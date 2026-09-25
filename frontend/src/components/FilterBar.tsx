@@ -236,12 +236,15 @@ interface DirectorFilterProps {
 }
 
 function DirectorFilter({ value, onChange }: DirectorFilterProps) {
+  // Texto digitado fica isolado do filtro confirmado (`value`/`onChange`): o filtro só é
+  // aplicado de fato quando uma sugestão é clicada, nunca por debounce da digitação.
+  const [inputText, setInputText] = useState(value)
   const [suggestions, setSuggestions] = useState<string[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
   const blurTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   useEffect(() => {
-    const trimmed = value.trim()
+    const trimmed = inputText.trim()
     if (trimmed.length < 2) return
 
     let cancelled = false
@@ -258,24 +261,31 @@ function DirectorFilter({ value, onChange }: DirectorFilterProps) {
       cancelled = true
       clearTimeout(timeoutId)
     }
-  }, [value])
+  }, [inputText])
 
   // Deriva a visibilidade em vez de limpar `suggestions` sincronamente no efeito:
   // evita mostrar sugestões de uma busca anterior quando o texto atual ficou curto.
-  const visibleSuggestions = value.trim().length >= 2 ? suggestions : []
+  const visibleSuggestions = inputText.trim().length >= 2 ? suggestions : []
 
   function selectSuggestion(name: string) {
     clearTimeout(blurTimeoutRef.current)
+    setInputText(name)
     onChange(name)
     setShowSuggestions(false)
+  }
+
+  function handleInputChange(next: string) {
+    setInputText(next)
+    // Apagar o campo à mão também limpa o filtro aplicado, sem exigir nova seleção.
+    if (next.trim() === '' && value !== '') onChange('')
   }
 
   return (
     <div className="relative">
       <input
         type="text"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
+        value={inputText}
+        onChange={(event) => handleInputChange(event.target.value)}
         onFocus={() => setShowSuggestions(true)}
         onBlur={() => {
           blurTimeoutRef.current = setTimeout(() => setShowSuggestions(false), 150)
@@ -342,7 +352,9 @@ function FilterBar({
         </FilterGroup>
 
         <FilterGroup label="Diretor">
-          <DirectorFilter value={director} onChange={onDirectorChange} />
+          {/* key={director} remonta o campo quando o filtro confirmado muda por fora (chip "X"
+              ou "Limpar filtros"), descartando o texto digitado sem precisar sincronizar estado. */}
+          <DirectorFilter key={director} value={director} onChange={onDirectorChange} />
         </FilterGroup>
 
         <FilterGroup label="Ano de lançamento">
