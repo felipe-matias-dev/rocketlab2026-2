@@ -133,6 +133,14 @@ function CatalogPage() {
     setTextInput((current) => ({ ...current, [field]: value }))
   }
 
+  // Usado pelos chips de filtro ativo: remove o valor confirmado (textFilters) na hora,
+  // em vez de esperar o debounce de digitação — o chip some assim que o X é clicado.
+  function clearConfirmedTextFilter(field: keyof TextFilters) {
+    setTextInput((current) => ({ ...current, [field]: '' }))
+    setTextFilters((current) => ({ ...current, [field]: '' }))
+    setPage(1)
+  }
+
   function toggleGenre(genreId: string) {
     setGenreIds((current) =>
       current.includes(genreId) ? current.filter((id) => id !== genreId) : [...current, genreId],
@@ -160,11 +168,13 @@ function CatalogPage() {
   const hasActiveFilters =
     genreIds.length > 0 || Object.values(textInput).some((value) => value !== '')
 
+  // Baseado em textFilters (confirmado), não textInput (digitação em andamento),
+  // pra não piscar/mudar de contagem a cada letra digitada.
   const advancedFilterCount =
     (genreIds.length > 0 ? 1 : 0) +
-    (textInput.director !== '' ? 1 : 0) +
-    (textInput.yearFrom !== '' || textInput.yearTo !== '' ? 1 : 0) +
-    (textInput.ratingMin !== '' ? 1 : 0)
+    (textFilters.director !== '' ? 1 : 0) +
+    (textFilters.yearFrom !== '' || textFilters.yearTo !== '' ? 1 : 0) +
+    (textFilters.ratingMin !== '' ? 1 : 0)
 
   // Deriva o carregamento comparando os parâmetros já carregados com os atuais,
   // em vez de resetar `data` sincronamente no efeito (sem re-render extra).
@@ -210,14 +220,14 @@ function CatalogPage() {
               genres={genres}
               selectedGenreIds={genreIds}
               onToggleGenre={toggleGenre}
-              director={textInput.director}
-              onDirectorChange={(value) => updateTextFilter('director', value)}
-              yearFrom={textInput.yearFrom}
-              yearTo={textInput.yearTo}
-              onYearFromChange={(value) => updateTextFilter('yearFrom', value)}
-              onYearToChange={(value) => updateTextFilter('yearTo', value)}
-              ratingMin={textInput.ratingMin}
-              onRatingMinChange={(value) => updateTextFilter('ratingMin', value)}
+              director={textFilters.director}
+              onDirectorChange={() => clearConfirmedTextFilter('director')}
+              yearFrom={textFilters.yearFrom}
+              yearTo={textFilters.yearTo}
+              onYearFromChange={() => clearConfirmedTextFilter('yearFrom')}
+              onYearToChange={() => clearConfirmedTextFilter('yearTo')}
+              ratingMin={textFilters.ratingMin}
+              onRatingMinChange={() => clearConfirmedTextFilter('ratingMin')}
               onClearAll={clearFilters}
             />
           </div>
