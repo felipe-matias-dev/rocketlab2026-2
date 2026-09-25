@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 
 import { listDirectors } from '../api/directors'
 import { focusRingClass } from '../styles/interactive'
+import { pressableClass } from '../styles/motion'
 import type { Genre } from '../types/movie'
 import { translateGenreName } from '../utils/genreLabels'
 
@@ -191,16 +192,19 @@ function GenreCombobox({ genres, selectedGenreIds, onToggleGenre }: GenreCombobo
         onClick={() => setOpen((current) => !current)}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className={`flex w-full items-center justify-between gap-2 rounded-md border border-border bg-surface px-3 py-1.5 text-sm ${focusRingClass}`}
+        className={`flex w-full items-center justify-between gap-2 rounded-md border border-border bg-surface px-3 py-1.5 text-sm ${pressableClass} ${focusRingClass}`}
       >
         <span className={selectedGenreIds.length === 0 ? 'text-ink-muted' : 'text-ink'}>{summary}</span>
-        <CaretDown size={14} className="shrink-0 text-ink-muted" />
+        <CaretDown
+          size={14}
+          className={`shrink-0 text-ink-muted transition-transform duration-150 ease-out motion-reduce:transition-none ${open ? 'rotate-180' : 'rotate-0'}`}
+        />
       </button>
       {open && (
         <ul
           role="listbox"
           aria-multiselectable="true"
-          className="absolute top-full left-0 z-10 mt-1 max-h-64 w-full min-w-56 overflow-y-auto rounded-md border border-border bg-surface py-1 shadow-md"
+          className="absolute top-full left-0 z-10 mt-1 max-h-64 w-full min-w-56 overflow-y-auto rounded-md border border-border bg-surface py-1 shadow-md motion-safe:animate-menu-in motion-reduce:animate-none"
         >
           {genres === null && <li className="px-3 py-1.5 text-sm text-ink-muted">Carregando...</li>}
           {genres?.map((genre) => {
@@ -212,10 +216,10 @@ function GenreCombobox({ genres, selectedGenreIds, onToggleGenre }: GenreCombobo
                   role="option"
                   aria-selected={selected}
                   onClick={() => onToggleGenre(genre.sk_genre_id)}
-                  className={`flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-sm text-ink hover:bg-accent/10 ${focusRingClass}`}
+                  className={`flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-sm text-ink hover:bg-accent/10 ${pressableClass} ${focusRingClass}`}
                 >
                   {translateGenreName(genre.nome_genero)}
-                  {selected && <Check size={14} className="shrink-0 text-accent" />}
+                  {selected && <Check size={14} className="shrink-0 text-accent motion-safe:animate-pop-in motion-reduce:animate-none" />}
                 </button>
               </li>
             )
@@ -234,7 +238,7 @@ interface DirectorFilterProps {
 function DirectorFilter({ value, onChange }: DirectorFilterProps) {
   const [suggestions, setSuggestions] = useState<string[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
-  const blurTimeoutRef = useRef<ReturnType<typeof setTimeout>>()
+  const blurTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   useEffect(() => {
     const trimmed = value.trim()
@@ -281,13 +285,13 @@ function DirectorFilter({ value, onChange }: DirectorFilterProps) {
         className={inputClass}
       />
       {showSuggestions && visibleSuggestions.length > 0 && (
-        <ul className="absolute top-full left-0 z-10 mt-1 w-full min-w-max rounded-md border border-border bg-surface py-1 shadow-md">
+        <ul className="absolute top-full left-0 z-10 mt-1 w-full min-w-max rounded-md border border-border bg-surface py-1 shadow-md motion-safe:animate-menu-in motion-reduce:animate-none">
           {visibleSuggestions.map((name) => (
             <li key={name}>
               <button
                 type="button"
                 onClick={() => selectSuggestion(name)}
-                className={`block w-full px-3 py-1.5 text-left text-sm whitespace-nowrap text-ink hover:bg-accent/10 ${focusRingClass}`}
+                className={`block w-full px-3 py-1.5 text-left text-sm whitespace-nowrap text-ink hover:bg-accent/10 ${pressableClass} ${focusRingClass}`}
               >
                 {name}
               </button>
@@ -359,7 +363,7 @@ function FilterBar({
         <button
           type="button"
           onClick={onClear}
-          className={`self-start rounded-md px-3 py-1.5 text-sm font-medium text-ink underline decoration-accent decoration-2 underline-offset-2 hover:decoration-accent-hover ${focusRingClass}`}
+          className={`self-start rounded-md px-3 py-1.5 text-sm font-medium text-ink underline decoration-accent decoration-2 underline-offset-2 hover:decoration-accent-hover ${pressableClass} ${focusRingClass}`}
         >
           Limpar filtros
         </button>

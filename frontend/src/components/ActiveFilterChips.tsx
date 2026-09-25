@@ -1,6 +1,7 @@
 import { X } from '@phosphor-icons/react'
 
 import { focusRingClass } from '../styles/interactive'
+import { pressableClass } from '../styles/motion'
 import type { Genre } from '../types/movie'
 import { translateGenreName } from '../utils/genreLabels'
 
@@ -27,13 +28,13 @@ interface Chip {
 
 function Chip({ label, onRemove }: { label: string; onRemove: () => void }) {
   return (
-    <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface py-1 pr-1 pl-3 text-xs font-medium text-ink">
+    <span className="inline-flex items-center gap-1 rounded-full border border-border bg-surface py-1 pr-1 pl-3 text-xs font-medium text-ink motion-safe:animate-pop-in motion-reduce:animate-none">
       {label}
       <button
         type="button"
         onClick={onRemove}
         aria-label={`Remover filtro: ${label}`}
-        className={`flex h-4 w-4 items-center justify-center rounded-full text-ink-muted hover:bg-accent/10 hover:text-accent ${focusRingClass}`}
+        className={`flex h-4 w-4 items-center justify-center rounded-full text-ink-muted hover:bg-accent/10 hover:text-accent ${pressableClass} ${focusRingClass}`}
       >
         <X size={12} weight="bold" />
       </button>
@@ -108,7 +109,7 @@ function ActiveFilterChips({
       <button
         type="button"
         onClick={onClearAll}
-        className={`rounded-md px-2 py-1 text-xs font-medium text-ink underline decoration-accent decoration-2 underline-offset-2 hover:decoration-accent-hover ${focusRingClass}`}
+        className={`rounded-md px-2 py-1 text-xs font-medium text-ink underline decoration-accent decoration-2 underline-offset-2 hover:decoration-accent-hover ${pressableClass} ${focusRingClass}`}
       >
         Limpar tudo
       </button>

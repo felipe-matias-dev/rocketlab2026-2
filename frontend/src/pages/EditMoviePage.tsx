@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { ApiError } from '../api/client'
 import { getMovie, updateMovie } from '../api/movies'
 import MovieForm from '../components/MovieForm'
+import { useToast } from '../components/Toast'
 import type { MovieDetail, MovieInput } from '../types/movie'
 
 /** Converte a ficha completa no formato de entrada do MovieForm — sempre
@@ -28,6 +29,7 @@ function movieDetailToInput(movie: MovieDetail): MovieInput {
 function EditMoviePage() {
   const { movieId } = useParams<{ movieId: string }>()
   const navigate = useNavigate()
+  const { showToast } = useToast()
   const [movie, setMovie] = useState<MovieDetail | null>(null)
   const [notFound, setNotFound] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -72,7 +74,10 @@ function EditMoviePage() {
           initialValues={movieDetailToInput(movie)}
           submitLabel="Salvar alterações"
           onSubmit={(input) => updateMovie(movieId, input)}
-          onSuccess={(updated) => navigate(`/movies/${updated.sk_movie_id}`)}
+          onSuccess={(updated) => {
+            showToast('Filme atualizado com sucesso.')
+            navigate(`/movies/${updated.sk_movie_id}`)
+          }}
         />
       </div>
     </div>

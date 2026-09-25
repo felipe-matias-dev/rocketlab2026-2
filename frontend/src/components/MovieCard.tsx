@@ -6,6 +6,8 @@ import type { MovieListItem } from '../types/movie'
 
 interface MovieCardProps {
   movie: MovieListItem
+  /** Atraso (ms) da animação de entrada; omitido = sem animação (ex: troca de página). */
+  entranceDelayMs?: number
 }
 
 const cardElevationClass =
@@ -13,11 +15,15 @@ const cardElevationClass =
   'ring-1 ring-black/5 transition-[box-shadow,transform] duration-200 ' +
   'hover:-translate-y-1 hover:shadow-[0_4px_8px_rgba(28,25,23,0.06),0_20px_32px_-8px_rgba(28,25,23,0.18)] hover:ring-accent/40'
 
-function MovieCard({ movie }: MovieCardProps) {
+function MovieCard({ movie, entranceDelayMs }: MovieCardProps) {
+  const entranceClass =
+    entranceDelayMs !== undefined ? 'motion-safe:animate-fade-rise motion-reduce:animate-none' : ''
+
   return (
     <Link
       to={`/movies/${movie.sk_movie_id}`}
-      className={`group flex flex-col overflow-hidden rounded-md bg-surface ${cardElevationClass} ${focusRingClass}`}
+      style={entranceDelayMs !== undefined ? { animationDelay: `${entranceDelayMs}ms` } : undefined}
+      className={`group flex flex-col overflow-hidden rounded-md bg-surface ${cardElevationClass} ${entranceClass} ${focusRingClass}`}
     >
       <div className="relative aspect-2/3 w-full overflow-hidden bg-surface-muted">
         {movie.url_poster ? (

@@ -1,4 +1,4 @@
-import { FilmSlate, Star } from '@phosphor-icons/react'
+import { CircleNotch, FilmSlate, Star } from '@phosphor-icons/react'
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 
@@ -6,7 +6,9 @@ import { ApiError } from '../api/client'
 import { deleteMovie, getMovie } from '../api/movies'
 import ReviewForm from '../components/ReviewForm'
 import ReviewList from '../components/ReviewList'
+import { useToast } from '../components/Toast'
 import { focusRingClass } from '../styles/interactive'
+import { pressableClass } from '../styles/motion'
 import type { MovieDetail, Person } from '../types/movie'
 import { translateGenreName } from '../utils/genreLabels'
 import type { Review } from '../types/review'
@@ -113,6 +115,7 @@ function MovieDetailSkeleton() {
 function MovieDetailPage() {
   const { movieId } = useParams<{ movieId: string }>()
   const navigate = useNavigate()
+  const { showToast } = useToast()
   const [movie, setMovie] = useState<MovieDetail | null>(null)
   const [notFound, setNotFound] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -147,6 +150,7 @@ function MovieDetailPage() {
       const nota_media = reviews.reduce((sum, item) => sum + item.nota, 0) / reviews.length
       return { ...current, reviews, nota_media, qtd_avaliacoes: reviews.length }
     })
+    showToast('Avaliação enviada com sucesso.')
   }
 
   async function handleDelete() {
@@ -156,6 +160,7 @@ function MovieDetailPage() {
     setDeleting(true)
     try {
       await deleteMovie(movieId)
+      showToast('Filme removido com sucesso.')
       navigate('/')
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao remover o filme.')
@@ -205,8 +210,9 @@ function MovieDetailPage() {
             type="button"
             onClick={handleDelete}
             disabled={deleting}
-            className={`rounded-md text-sm text-destructive hover:opacity-75 disabled:cursor-not-allowed disabled:opacity-50 ${focusRingClass}`}
+            className={`inline-flex items-center gap-1.5 rounded-md text-sm text-destructive hover:opacity-75 disabled:cursor-not-allowed disabled:opacity-50 ${pressableClass} ${focusRingClass}`}
           >
+            {deleting && <CircleNotch size={14} weight="bold" className="animate-spin motion-reduce:animate-none" />}
             {deleting ? 'Removendo...' : 'Remover filme'}
           </button>
         </div>

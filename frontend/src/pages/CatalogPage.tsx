@@ -1,5 +1,5 @@
 import { Funnel } from '@phosphor-icons/react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { listMovies } from '../api/movies'
 import { listGenres } from '../api/genres'
@@ -11,6 +11,7 @@ import Pagination from '../components/Pagination'
 import SearchBar from '../components/SearchBar'
 import SortControl from '../components/SortControl'
 import { focusRingClass } from '../styles/interactive'
+import { pressableClass, staggerDelayMs } from '../styles/motion'
 import type { Genre, MovieListItem, MovieSort, SortOrder } from '../types/movie'
 
 const PAGE_SIZE = 20
@@ -36,6 +37,7 @@ interface CatalogData {
   key: string
   movies: MovieListItem[]
   total: number
+  animateEntrance: boolean
 }
 
 function CatalogGrid({ children }: { children: React.ReactNode }) {
@@ -67,6 +69,7 @@ function CatalogPage() {
   const [data, setData] = useState<CatalogData | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [filtersOpen, setFiltersOpen] = useState(false)
+  const lastNonPageKeyRef = useRef<string | null>(null)
 
   useEffect(() => {
     listGenres()
@@ -86,6 +89,7 @@ function CatalogPage() {
 
   useEffect(() => {
     let cancelled = false
+    const nonPageKey = JSON.stringify({ genreIds, textFilters, sort, order })
 
     listMovies({
       page,
@@ -101,10 +105,16 @@ function CatalogPage() {
     })
       .then((result) => {
         if (!cancelled) {
+          // Anima a entrada do grid só quando filtro/busca/ordenação mudou de verdade — nunca
+          // numa paginação pura (mesma nonPageKey), já que DESIGN.md proíbe motion em ações de
+          // alta frequência como trocar de página.
+          const animateEntrance = lastNonPageKeyRef.current !== nonPageKey
+          lastNonPageKeyRef.current = nonPageKey
           setData({
             key: filterKey(page, genreIds, textFilters, sort, order),
             movies: result.items,
             total: result.total,
+            animateEntrance,
           })
         }
       })
@@ -174,7 +184,7 @@ function CatalogPage() {
               type="button"
               onClick={() => setFiltersOpen((current) => !current)}
               aria-expanded={filtersOpen}
-              className={`flex items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium transition-colors ${focusRingClass} ${
+              className={`flex items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium ${pressableClass} ${focusRingClass} ${
                 filtersOpen
                   ? 'border-accent text-ink'
                   : 'border-border text-ink hover:border-accent'
@@ -183,7 +193,10 @@ function CatalogPage() {
               <Funnel size={18} />
               Filtros
               {advancedFilterCount > 0 && (
-                <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1 text-xs font-semibold text-ink">
+                <span
+                  key={advancedFilterCount}
+                  className="flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1 text-xs font-semibold text-ink motion-safe:animate-pop-in motion-reduce:animate-none"
+                >
                   {advancedFilterCount}
                 </span>
               )}
@@ -210,25 +223,35 @@ function CatalogPage() {
           </div>
         )}
 
-        {filtersOpen && (
-          <div className="mt-4 border-t border-border pt-4">
-            <FilterBar
-              genres={genres}
-              selectedGenreIds={genreIds}
-              onToggleGenre={toggleGenre}
-              director={textInput.director}
-              onDirectorChange={(value) => updateTextFilter('director', value)}
-              yearFrom={textInput.yearFrom}
-              yearTo={textInput.yearTo}
-              onYearFromChange={(value) => updateTextFilter('yearFrom', value)}
-              onYearToChange={(value) => updateTextFilter('yearTo', value)}
-              ratingMin={textInput.ratingMin}
-              onRatingMinChange={(value) => updateTextFilter('ratingMin', value)}
-              hasActiveFilters={hasActiveFilters}
-              onClear={clearFilters}
-            />
+        <div
+          className={`grid transition-[grid-template-rows] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none ${
+            filtersOpen ? 'mt-4 grid-rows-[1fr]' : 'grid-rows-[0fr]'
+          }`}
+        >
+          <div className="min-h-0 overflow-hidden" inert={!filtersOpen}>
+            <div
+              className={`border-t border-border pt-4 transition-opacity duration-200 motion-reduce:transition-none ${
+                filtersOpen ? 'opacity-100 delay-100' : 'opacity-0'
+              }`}
+            >
+              <FilterBar
+                genres={genres}
+                selectedGenreIds={genreIds}
+                onToggleGenre={toggleGenre}
+                director={textInput.director}
+                onDirectorChange={(value) => updateTextFilter('director', value)}
+                yearFrom={textInput.yearFrom}
+                yearTo={textInput.yearTo}
+                onYearFromChange={(value) => updateTextFilter('yearFrom', value)}
+                onYearToChange={(value) => updateTextFilter('yearTo', value)}
+                ratingMin={textInput.ratingMin}
+                onRatingMinChange={(value) => updateTextFilter('ratingMin', value)}
+                hasActiveFilters={hasActiveFilters}
+                onClear={clearFilters}
+              />
+            </div>
           </div>
-        )}
+        </div>
       </div>
 
       <div className="mt-6">
@@ -250,14 +273,18 @@ function CatalogPage() {
           </p>
         )}
 
-        {!error && movies !== null && movies.length > 0 && (
+        {!error && data !== null && movies !== null && movies.length > 0 && (
           <>
             <p className="mb-3 text-sm text-ink-muted">
               {data.total.toLocaleString('pt-BR')} {data.total === 1 ? 'filme encontrado' : 'filmes encontrados'}
             </p>
             <CatalogGrid>
-              {movies.map((movie) => (
-                <MovieCard key={movie.sk_movie_id} movie={movie} />
+              {movies.map((movie, index) => (
+                <MovieCard
+                  key={movie.sk_movie_id}
+                  movie={movie}
+                  entranceDelayMs={data.animateEntrance ? staggerDelayMs(index) : undefined}
+                />
               ))}
             </CatalogGrid>
             <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />

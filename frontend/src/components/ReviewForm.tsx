@@ -1,7 +1,9 @@
+import { CircleNotch } from '@phosphor-icons/react'
 import { useState } from 'react'
 
 import { ApiError } from '../api/client'
 import { createReview } from '../api/movies'
+import { pressableClass } from '../styles/motion'
 import type { Review } from '../types/review'
 import ScoreInput from './ScoreInput'
 
@@ -78,8 +80,9 @@ function ReviewForm({ movieId, onCreated }: ReviewFormProps) {
       <button
         type="submit"
         disabled={submitting}
-        className="w-fit rounded-md bg-accent px-4 py-2 text-sm font-medium text-ink transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+        className={`inline-flex w-fit items-center gap-2 rounded-md bg-accent px-4 py-2 text-sm font-medium text-ink hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60 ${pressableClass}`}
       >
+        {submitting && <CircleNotch size={16} weight="bold" className="animate-spin motion-reduce:animate-none" />}
         {submitting ? 'Enviando...' : 'Enviar avaliação'}
       </button>
     </form>

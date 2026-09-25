@@ -1,9 +1,10 @@
-import { Check, FilmSlate } from '@phosphor-icons/react'
+import { Check, CircleNotch, FilmSlate } from '@phosphor-icons/react'
 import { useEffect, useState } from 'react'
 
 import { ApiError } from '../api/client'
 import { listGenres } from '../api/genres'
 import { focusRingClass } from '../styles/interactive'
+import { pressableClass } from '../styles/motion'
 import type { Genre, MovieDetail, MovieInput } from '../types/movie'
 import { translateGenreName } from '../utils/genreLabels'
 
@@ -26,7 +27,12 @@ function Field({ label, htmlFor, error, children }: FieldProps) {
         {label}
       </label>
       {children}
-      <p id={`${htmlFor}-error`} className={`min-h-4 text-xs ${error ? 'text-destructive' : 'invisible'}`}>
+      <p
+        id={`${htmlFor}-error`}
+        className={`min-h-4 text-xs transition-discrete transition-[opacity,transform,visibility] duration-150 ease-out motion-reduce:transition-none ${
+          error ? 'visible translate-y-0 text-destructive opacity-100' : 'invisible -translate-y-0.5 opacity-0'
+        }`}
+      >
         {error ?? 'placeholder'}
       </p>
     </div>
@@ -59,7 +65,9 @@ function ImagePreview({ url, alt, containerClassName }: ImagePreviewProps) {
   if (!url.trim()) return null
 
   return (
-    <div className={`mt-2 overflow-hidden rounded-md border border-border bg-surface-muted ${containerClassName}`}>
+    <div
+      className={`mt-2 overflow-hidden rounded-md border border-border bg-surface-muted motion-safe:animate-fade-in motion-reduce:animate-none ${containerClassName}`}
+    >
       {failed ? (
         <div className="flex h-full w-full items-center justify-center text-ink-muted/40">
           <FilmSlate size={28} weight="light" />
@@ -256,13 +264,15 @@ function MovieForm({ initialValues, submitLabel, onSubmit, onSuccess }: MovieFor
                   type="button"
                   aria-pressed={selected}
                   onClick={() => toggleGenre(genre.sk_genre_id)}
-                  className={`flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${focusRingClass} ${
+                  className={`flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium ${pressableClass} ${focusRingClass} ${
                     selected
                       ? 'border-accent bg-accent text-ink'
                       : 'border-border text-ink-muted hover:border-accent'
                   }`}
                 >
-                  {selected && <Check size={12} />}
+                  {selected && (
+                    <Check size={12} className="motion-safe:animate-pop-in motion-reduce:animate-none" />
+                  )}
                   {translateGenreName(genre.nome_genero)}
                 </button>
               )
@@ -378,8 +388,9 @@ function MovieForm({ initialValues, submitLabel, onSubmit, onSuccess }: MovieFor
       <button
         type="submit"
         disabled={submitting}
-        className="w-fit rounded-md bg-accent px-4 py-2 text-sm font-medium text-ink transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60"
+        className={`inline-flex w-fit items-center gap-2 rounded-md bg-accent px-4 py-2 text-sm font-medium text-ink hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-60 ${pressableClass}`}
       >
+        {submitting && <CircleNotch size={16} weight="bold" className="animate-spin motion-reduce:animate-none" />}
         {submitting ? 'Salvando...' : submitLabel}
       </button>
     </form>

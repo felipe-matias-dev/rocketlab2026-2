@@ -1,6 +1,7 @@
 import { CaretLeft, CaretRight } from '@phosphor-icons/react'
 
 import { focusRingClass } from '../styles/interactive'
+import { pressableClass } from '../styles/motion'
 
 interface PaginationProps {
   page: number
@@ -30,7 +31,7 @@ function getPageItems(page: number, totalPages: number): PageItem[] {
 }
 
 const arrowButtonClass =
-  `flex min-h-11 items-center gap-1 rounded-md border border-border px-3.5 py-2 text-sm text-ink transition-colors hover:border-accent disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-border ${focusRingClass}`
+  `flex min-h-11 items-center gap-1 rounded-md border border-border px-3.5 py-2 text-sm text-ink hover:border-accent disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-border ${pressableClass} ${focusRingClass}`
 
 function Pagination({ page, totalPages, onPageChange }: PaginationProps) {
   if (totalPages <= 1) return null
@@ -56,8 +57,8 @@ function Pagination({ page, totalPages, onPageChange }: PaginationProps) {
             aria-current={item === page ? 'page' : undefined}
             className={
               item === page
-                ? `flex min-h-11 min-w-11 items-center justify-center rounded-md border border-accent bg-accent px-3 py-1.5 text-sm font-medium text-ink ${focusRingClass}`
-                : `flex min-h-11 min-w-11 items-center justify-center rounded-md border border-border px-3 py-1.5 text-sm text-ink transition-colors hover:border-accent ${focusRingClass}`
+                ? `flex min-h-11 min-w-11 items-center justify-center rounded-md border border-accent bg-accent px-3 py-1.5 text-sm font-medium text-ink ${pressableClass} ${focusRingClass}`
+                : `flex min-h-11 min-w-11 items-center justify-center rounded-md border border-border px-3 py-1.5 text-sm text-ink hover:border-accent ${pressableClass} ${focusRingClass}`
             }
           >
             {item}

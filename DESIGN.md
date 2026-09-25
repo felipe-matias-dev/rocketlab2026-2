@@ -115,6 +115,32 @@ shadow layer to still read as the most elevated layer on the page. Static, non-i
 and inline controls (labels, plain body copy) stay flat; shadow is reserved for surfaces the user
 scans or clicks into (cards, panels, modals), not for decoration.
 
+## Motion
+
+Motion serves feedback, state, and continuity - never decoration or page-load choreography
+(Operate mode, per Emil Kowalski principles already stated in Overview). Foundation lives in
+`frontend/src/styles/motion.ts` and the `@theme` block of `frontend/src/index.css`:
+
+- **Reduced motion is systemic, not per-component.** Every spatial/decorative animation is written
+  as a pair - `motion-safe:animate-*`/transform, plus `motion-reduce:animate-none` or a static
+  end-state. Opacity/color transitions that carry state meaning (hover, press, selected, error)
+  are not spatial and stay unconditional.
+- **Universal press feedback.** Every clickable button/link uses the shared `pressableClass`
+  (`active:scale-[0.98]`, 100ms) - the same convention as `focusRingClass` for focus rings.
+- **Animation tokens** (`--animate-fade-rise`, `--animate-pop-in`, `--animate-menu-in`,
+  `--animate-fade-in`, `--animate-toast-in`/`-out`): 150ms for routine state changes (menus,
+  badges, checkmarks), 300-400ms for layout/overlay entrances (catalog grid, toasts), natural
+  deceleration easing (`cubic-bezier(0.16, 1, 0.3, 1)`) on entrance, faster/accelerating on exit.
+- **Never on high-frequency actions.** Pagination page-changes apply zero animation classes -
+  the catalog grid's entrance animation is explicitly gated off on a pure page change (only fires
+  when a filter/search/sort actually changed) rather than merely shortened.
+- **Loading spinners** (`CircleNotch` + `animate-spin`) on in-flight submit/delete actions are a
+  functional progress indicator, not an idle decorative loop, so they don't violate the
+  never-decorative-loops rule.
+- **Expand/collapse panels** use the CSS Grid `0fr → 1fr` accordion technique (never animate
+  `height`/`max-height` directly), paired with the `inert` HTML attribute on the collapsed content
+  so it stays out of the tab order and unclickable while visually hidden.
+
 ## Shapes
 
 **The One Radius Rule.** Every card, input, button, and modal uses the same 8px radius
