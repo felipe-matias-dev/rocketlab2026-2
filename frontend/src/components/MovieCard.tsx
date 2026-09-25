@@ -39,7 +39,7 @@ function MovieCard({ movie, entranceDelayMs }: MovieCardProps) {
           </div>
         )}
         {movie.qtd_avaliacoes > 0 && (
-          <div className="absolute top-2 right-2 flex items-center gap-1 rounded-full bg-ink/75 px-2 py-0.5 text-xs font-semibold text-white backdrop-blur-sm">
+          <div className="absolute top-2 right-2 flex items-center gap-1 rounded-full bg-ink/75 px-2 py-0.5 text-xs font-semibold tabular-nums text-white backdrop-blur-sm">
             <Star size={12} weight="fill" className="text-accent" />
             {movie.nota_media?.toFixed(1)}
           </div>
@@ -48,7 +48,7 @@ function MovieCard({ movie, entranceDelayMs }: MovieCardProps) {
       <div className="flex flex-1 flex-col gap-1 p-3.5">
         <h3 className="line-clamp-2 text-sm leading-snug font-medium text-ink">{movie.titulo}</h3>
         <div className="mt-auto flex items-center justify-between text-xs text-ink-muted">
-          <span>{movie.ano_lancamento ?? '—'}</span>
+          <span className="tabular-nums">{movie.ano_lancamento ?? '—'}</span>
           {movie.qtd_avaliacoes === 0 && <span>Sem avaliações</span>}
         </div>
       </div>

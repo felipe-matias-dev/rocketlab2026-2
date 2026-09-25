@@ -91,7 +91,7 @@ function MetricsSection({ movie }: { movie: MovieDetail }) {
         {stats.map((stat) => (
           <div key={stat.label}>
             <dt className="text-xs font-medium uppercase text-ink-muted">{stat.label}</dt>
-            <dd className="mt-1 text-sm text-ink">{stat.value}</dd>
+            <dd className="mt-1 text-sm text-ink tabular-nums">{stat.value}</dd>
           </div>
         ))}
       </dl>
@@ -242,7 +242,7 @@ function MovieDetailPage() {
                 <span>{movie.ano_lancamento ?? 'Ano desconhecido'}</span>
                 {movie.duracao_minutos !== null && <span>{movie.duracao_minutos} min</span>}
                 {movie.status_filme && <span>{movie.status_filme}</span>}
-                <span className="flex items-center gap-1 text-ink">
+                <span className="flex items-center gap-1 text-ink tabular-nums">
                   <Star size={14} weight="fill" className="text-accent" />
                   {movie.nota_media !== null
                     ? `${movie.nota_media.toFixed(1)} (${movie.qtd_avaliacoes})`

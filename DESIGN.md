@@ -16,7 +16,7 @@ colors:
   success: "#059669"
 typography:
   body:
-    fontFamily: "ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+    fontFamily: "'Inter Variable', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
     fontSize: "1rem"
     fontWeight: 400
     lineHeight: 1.5
@@ -43,10 +43,10 @@ the data. Density is moderate: comfortable enough to scan a grid of movie cards 
 stretches, not so airy that pagination feels wasteful, not so tight that it reads as a cockpit.
 
 Confirmed visual rejections: no purple/blue AI-gradient default, no glassmorphism, no dark-mode
-requirement in the MVP, no external font dependency, no 5-star iconography implying a 1-5 scale
-(the rating scale is numeric 0-10 - see PRODUCT.md). A 10-star widget mapped 1:1 to the existing
-0-10 scale (continuous fill, one star per point) is fine - it's a display convention for the same
-numeric scale, not a different scale.
+requirement in the MVP, no third-party/CDN font loading, no 5-star iconography implying a 1-5
+scale (the rating scale is numeric 0-10 - see PRODUCT.md). A 10-star widget mapped 1:1 to the
+existing 0-10 scale (continuous fill, one star per point) is fine - it's a display convention for
+the same numeric scale, not a different scale.
 
 **Key Characteristics:**
 - Warm stone surfaces (not cool zinc) with a single amber accent, used consistently everywhere
@@ -56,7 +56,10 @@ numeric scale, not a different scale.
 - Cards and panels carry a soft, tinted shadow (never pure black) rather than relying on a border
   alone - revised from the original all-flat "ledger" concept after the restraint read as bland
   in practice; see Elevation & Depth below.
-- System font stack only - zero web-font dependency, instant render.
+- Inter Variable, self-hosted (no CDN call) - revised from the original system-font-only stack
+  once the ledger read as generic; still a single workhorse family with the system stack kept as
+  fallback, so the zero-CDN-dependency and instant-render intent survives the swap. See
+  Typography below for the reasoning and trade-off.
 - One corner-radius scale throughout, with pill shape reserved for badges/tags only.
 - Motion exists but is restrained and purposeful (Emil Kowalski principles): short, eased
   transitions on interactive feedback, never decorative loops, never on high-frequency actions
@@ -88,16 +91,32 @@ used decoratively.
 
 ## Typography
 
-**Body Font:** `ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif`
+**Body Font:** `"Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+Helvetica, Arial, sans-serif`
 
-**Character:** A workhorse system stack, chosen deliberately for an Operate-mode tool - legible,
-instant to render, zero layout shift from web-font loading. No display/headline font is
-introduced; hierarchy comes from weight and size within the same family, not a second typeface.
+**Character:** Revised from the original system-stack-only decision: the system stack rendered
+correctly but read as an unexamined default rather than a considered choice, undercutting the
+"well-kept ledger" north star it was meant to serve. Inter Variable is a single, self-hosted
+variable font (`@fontsource-variable/inter`, weight axis only - no italic subset, since none of
+this UI uses italics) - it keeps the same intent (one workhorse family, no display/headline
+typeface, hierarchy from weight and size, no CDN call, no runtime font-pairing decision) while
+having a taller x-height, tighter numeral spacing, and better hinting at UI sizes than the
+default system stack, which reads as more deliberate craft in a data-dense admin tool. The
+system stack remains as the fallback chain, so a blocked/slow font fetch degrades gracefully
+rather than to invisible text (`font-display: swap` is set by the package). Trade-off accepted
+knowingly: this adds a small self-hosted asset (~20-30kB gzipped for the Latin/Latin-ext subsets
+this app actually uses) where the previous stack shipped zero bytes - judged worth it for the
+perceived-quality gain given the tool is used in-session on a warm cache, not on a cold mobile
+connection. No display/headline font is introduced; hierarchy still comes from weight and size
+within the one family, not a second typeface.
 
 ### Hierarchy
 - **Title** (600, 1.5rem-1.875rem, 1.2 line-height): page titles, movie title on detail view.
 - **Body** (400, 1rem, 1.5 line-height): catalog cards, form fields, review text.
 - **Label** (500, 0.875rem, uppercase off): form labels, table/card metadata.
+- **Numeric/data** (tabular figures via `tabular-nums`): ratings, release years, box-office and
+  budget figures - anywhere digits repeat down a card grid or stat list, so columns of numbers
+  align instead of jittering with each digit's natural width.
 
 ## Layout
 
@@ -154,7 +173,8 @@ elsewhere.
 
 ### Do:
 - **Do** keep Amber as the only accent color across every screen.
-- **Do** use the system font stack; do not add a web font later without revisiting this file.
+- **Do** use Inter Variable (self-hosted) with the system stack as fallback; do not switch faces
+  or add a second family without revisiting this file.
 - **Do** keep buttons/cards/inputs on the single 8px radius scale.
 - **Do** show a numeric 0-10 rating input/display; a 10-star continuous-fill widget mapped 1:1 to
   the 0-10 scale is acceptable, but never a 5-star widget implying a 1-5 scale.
