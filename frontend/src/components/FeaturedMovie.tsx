@@ -1,15 +1,18 @@
-import { CircleNotch, FilmSlate, Star } from '@phosphor-icons/react'
+import { CircleNotch, FilmSlate } from '@phosphor-icons/react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { getMovie, listMovies } from '../api/movies'
 import { focusRingClass } from '../styles/interactive'
-import { pressableClass } from '../styles/motion'
 import { translateGenreName } from '../utils/genreLabels'
 import type { MovieDetail } from '../types/movie'
 
 const MIN_RATING = 8
 const CANDIDATES_PAGE_SIZE = 50
+
+// Mesmo corte de canto do MovieCard, pro quadro puxado usar a mesma gramática visual
+// quando não há pôster.
+const clippedCornerStyle = { clipPath: 'polygon(0 0, 100% 0, 100% 100%, 14px 100%, 0 calc(100% - 14px))' }
 
 function pickRandom<T>(items: T[]): T | null {
   if (items.length === 0) return null
@@ -68,22 +71,28 @@ function FeaturedMovie() {
   if (loading) return <FeaturedMovieSkeleton />
   if (!movie) return null
 
-  const image = movie.url_backdrop ?? movie.url_poster
+  const hasPoster = Boolean(movie.url_poster) && !imageError
 
   return (
-    <div className="mb-6 overflow-hidden rounded-md bg-surface shadow-[0_1px_2px_rgba(28,25,23,0.04),0_8px_20px_-6px_rgba(28,25,23,0.08)] ring-1 ring-black/5">
-      <div className="flex flex-col sm:flex-row">
-        <div className="relative aspect-video w-full shrink-0 overflow-hidden bg-surface-muted sm:aspect-auto sm:w-72">
-          {image && !imageError ? (
+    <div className="mb-8">
+      <Link
+        to={`/movies/${movie.sk_movie_id}`}
+        className={`group relative flex w-full max-w-md -rotate-1 gap-3 border border-border bg-surface p-3 ring-2 ring-accent transition-transform duration-200 hover:rotate-0 motion-reduce:transition-none ${focusRingClass}`}
+      >
+        <div
+          className="relative h-36 w-24 shrink-0 overflow-hidden bg-surface-muted"
+          style={hasPoster ? undefined : clippedCornerStyle}
+        >
+          {hasPoster ? (
             <>
               {!imageLoaded && (
                 <div className="absolute inset-0 flex items-center justify-center" aria-hidden="true">
-                  <CircleNotch size={28} weight="bold" className="text-ink-muted/40 motion-safe:animate-spin-fast" />
+                  <CircleNotch size={20} weight="bold" className="text-ink-muted/40 motion-safe:animate-spin-fast" />
                 </div>
               )}
               <img
-                src={image}
-                alt={movie.titulo}
+                src={movie.url_poster ?? undefined}
+                alt=""
                 onLoad={() => setImageLoaded(true)}
                 onError={() => setImageError(true)}
                 className={`h-full w-full object-cover transition-opacity duration-300 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
@@ -91,62 +100,50 @@ function FeaturedMovie() {
             </>
           ) : (
             <div className="flex h-full w-full items-center justify-center text-ink-muted/40">
-              <FilmSlate size={40} weight="light" />
+              <FilmSlate size={24} weight="light" />
             </div>
           )}
-        </div>
-
-        <div className="flex flex-1 flex-col gap-3 p-6">
-          <span className="text-xs font-medium text-accent">Filme em destaque</span>
-
-          <h2 className="text-2xl font-semibold text-ink">{movie.titulo}</h2>
-
-          <div className="flex flex-wrap items-center gap-3 text-sm text-ink-muted">
-            <span>{movie.ano_lancamento ?? 'Ano desconhecido'}</span>
-            {movie.genres.length > 0 && (
-              <span>{movie.genres.map((genre) => translateGenreName(genre.nome_genero)).join(', ')}</span>
-            )}
-          </div>
 
           {movie.nota_media !== null && (
-            <div className="flex items-center gap-1.5 text-sm">
-              <Star size={16} weight="fill" className="text-accent" />
-              <span className="text-lg font-semibold tabular-nums text-accent">
-                {movie.nota_media.toFixed(1)} / 10
-              </span>
-              <span className="text-ink-muted">
-                · {movie.qtd_avaliacoes} {movie.qtd_avaliacoes === 1 ? 'avaliação' : 'avaliações'}
-              </span>
+            <div className="absolute top-1 right-1 flex h-6 w-6 items-center justify-center rounded-full border-2 border-accent bg-ink/35 text-[11px] font-bold tabular-nums text-accent backdrop-blur-[1px]">
+              {movie.nota_media.toFixed(1)}
             </div>
           )}
-
-          {movie.sinopse && <p className="line-clamp-3 text-sm text-ink-muted">{movie.sinopse}</p>}
-
-          <Link
-            to={`/movies/${movie.sk_movie_id}`}
-            className={`mt-auto inline-flex w-fit items-center gap-2 rounded-md bg-accent px-4 py-2 text-sm font-medium text-ink hover:bg-accent-hover ${pressableClass} ${focusRingClass}`}
-          >
-            Ver detalhes
-          </Link>
         </div>
-      </div>
+
+        <div className="min-w-0 flex-1 py-0.5">
+          <h2 className="line-clamp-2 text-base leading-snug font-semibold text-ink">{movie.titulo}</h2>
+          <p className="mt-1 text-xs text-ink-muted">
+            {movie.ano_lancamento ?? 'Ano desconhecido'}
+            {movie.genres.length > 0 &&
+              ` · ${movie.genres.map((genre) => translateGenreName(genre.nome_genero)).join(', ')}`}
+          </p>
+          {movie.qtd_avaliacoes > 0 ? (
+            <p className="mt-1 text-xs text-ink-muted">
+              {movie.qtd_avaliacoes} {movie.qtd_avaliacoes === 1 ? 'avaliação' : 'avaliações'}
+            </p>
+          ) : (
+            <p className="mt-1 text-xs text-ink-muted">Sem avaliações</p>
+          )}
+          {movie.sinopse && <p className="mt-2 line-clamp-2 text-xs text-ink-muted">{movie.sinopse}</p>}
+        </div>
+      </Link>
+      <p className="mt-2 ml-1 text-xs text-ink-muted">Em destaque · sorteado entre os mais bem avaliados</p>
     </div>
   )
 }
 
 function FeaturedMovieSkeleton() {
   return (
-    <div className="mb-6 overflow-hidden rounded-md bg-surface shadow-[0_1px_2px_rgba(28,25,23,0.04),0_8px_20px_-6px_rgba(28,25,23,0.08)] ring-1 ring-black/5">
-      <div className="flex flex-col sm:flex-row">
-        <div className="flex aspect-video w-full shrink-0 animate-pulse items-center justify-center bg-surface-muted sm:aspect-auto sm:w-72">
-          <CircleNotch size={28} weight="bold" className="text-ink-muted/40 motion-safe:animate-spin-fast" aria-hidden="true" />
+    <div className="mb-8">
+      <div className="flex w-full max-w-md -rotate-1 gap-3 border border-border bg-surface p-3 ring-2 ring-accent/50">
+        <div className="flex h-36 w-24 shrink-0 animate-pulse items-center justify-center bg-surface-muted">
+          <CircleNotch size={20} weight="bold" className="text-ink-muted/40 motion-safe:animate-spin-fast" aria-hidden="true" />
         </div>
-        <div className="flex flex-1 flex-col gap-3 p-6">
-          <div className="h-3 w-24 animate-pulse rounded bg-surface-muted" />
-          <div className="h-7 w-2/3 animate-pulse rounded bg-surface-muted" />
-          <div className="h-4 w-1/3 animate-pulse rounded bg-surface-muted" />
-          <div className="h-4 w-full animate-pulse rounded bg-surface-muted" />
-          <div className="h-4 w-5/6 animate-pulse rounded bg-surface-muted" />
+        <div className="flex-1 space-y-2 py-1">
+          <div className="h-4 w-4/5 animate-pulse rounded bg-surface-muted" />
+          <div className="h-3 w-1/2 animate-pulse rounded bg-surface-muted" />
+          <div className="h-3 w-2/3 animate-pulse rounded bg-surface-muted" />
         </div>
       </div>
     </div>

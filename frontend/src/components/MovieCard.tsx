@@ -1,4 +1,4 @@
-import { CircleNotch, FilmSlate, Star } from '@phosphor-icons/react'
+import { CircleNotch, FilmSlate } from '@phosphor-icons/react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 
@@ -7,29 +7,34 @@ import type { MovieListItem } from '../types/movie'
 
 interface MovieCardProps {
   movie: MovieListItem
+  /** Posição real do filme na lista ordenada/filtrada atual — o número do quadro na prancha. */
+  frameNumber: string
   /** Atraso (ms) da animação de entrada; omitido = sem animação (ex: troca de página). */
   entranceDelayMs?: number
 }
 
-const cardElevationClass =
-  'shadow-[0_1px_2px_rgba(28,25,23,0.04),0_6px_16px_-4px_rgba(28,25,23,0.10)] ' +
-  'ring-1 ring-black/5 transition-[box-shadow,transform] duration-200 ' +
-  'hover:-translate-y-1 hover:shadow-[0_4px_8px_rgba(28,25,23,0.06),0_20px_32px_-8px_rgba(28,25,23,0.18)] hover:ring-accent/40'
+// Corta o canto do quadro quando não há pôster — marca o "negativo em branco",
+// em vez de um selo de texto sobre a moldura.
+const clippedCornerStyle = { clipPath: 'polygon(0 0, 100% 0, 100% 100%, 14px 100%, 0 calc(100% - 14px))' }
 
-function MovieCard({ movie, entranceDelayMs }: MovieCardProps) {
+function MovieCard({ movie, frameNumber, entranceDelayMs }: MovieCardProps) {
   const [posterLoaded, setPosterLoaded] = useState(false)
   const [posterError, setPosterError] = useState(false)
   const entranceClass =
     entranceDelayMs !== undefined ? 'motion-safe:animate-fade-rise motion-reduce:animate-none' : ''
+  const hasPoster = Boolean(movie.url_poster) && !posterError
 
   return (
     <Link
       to={`/movies/${movie.sk_movie_id}`}
       style={entranceDelayMs !== undefined ? { animationDelay: `${entranceDelayMs}ms` } : undefined}
-      className={`group flex flex-col overflow-hidden rounded-md bg-surface ${cardElevationClass} ${entranceClass} ${focusRingClass}`}
+      className={`group relative flex flex-col bg-surface hover:z-10 ${entranceClass} ${focusRingClass}`}
     >
-      <div className="relative aspect-2/3 w-full overflow-hidden bg-surface-muted">
-        {movie.url_poster && !posterError ? (
+      <div
+        className="relative aspect-2/3 w-full overflow-hidden bg-surface-muted"
+        style={hasPoster ? undefined : clippedCornerStyle}
+      >
+        {hasPoster ? (
           <>
             {!posterLoaded && (
               <div className="absolute inset-0 flex items-center justify-center" aria-hidden="true">
@@ -37,12 +42,12 @@ function MovieCard({ movie, entranceDelayMs }: MovieCardProps) {
               </div>
             )}
             <img
-              src={movie.url_poster}
+              src={movie.url_poster ?? undefined}
               alt={movie.titulo}
               loading="lazy"
               onLoad={() => setPosterLoaded(true)}
               onError={() => setPosterError(true)}
-              className={`h-full w-full object-cover transition-[opacity,transform] duration-300 group-hover:scale-105 ${posterLoaded ? 'opacity-100' : 'opacity-0'}`}
+              className={`h-full w-full object-cover transition-opacity duration-300 ${posterLoaded ? 'opacity-100' : 'opacity-0'}`}
             />
           </>
         ) : (
@@ -50,27 +55,35 @@ function MovieCard({ movie, entranceDelayMs }: MovieCardProps) {
             <FilmSlate size={40} weight="light" />
           </div>
         )}
+
+        <span className="absolute top-1.5 left-1.5 bg-ink/70 px-1 py-0.5 text-[10px] leading-none font-medium tabular-nums text-white/90">
+          {frameNumber}
+        </span>
+
         {movie.qtd_avaliacoes > 0 && (
-          <div className="absolute top-2 right-2 flex items-center gap-1 rounded-full bg-ink/75 px-2 py-0.5 text-xs font-semibold tabular-nums text-white backdrop-blur-sm">
-            <Star size={12} weight="fill" className="text-accent" />
+          <div className="absolute top-1.5 right-1.5 flex h-7 w-7 items-center justify-center rounded-full border-2 border-accent bg-ink/35 text-xs font-bold tabular-nums text-accent backdrop-blur-[1px]">
             {movie.nota_media?.toFixed(1)}
           </div>
         )}
       </div>
-      <div className="flex flex-1 flex-col gap-1 p-3.5">
+      <div className="flex flex-1 flex-col gap-1 p-3">
         <h3 className="line-clamp-2 text-sm leading-snug font-medium text-ink">{movie.titulo}</h3>
         <div className="mt-auto flex items-center justify-between text-xs text-ink-muted">
           <span className="tabular-nums">{movie.ano_lancamento ?? '—'}</span>
           {movie.qtd_avaliacoes === 0 && <span>Sem avaliações</span>}
         </div>
       </div>
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 opacity-0 ring-2 ring-inset ring-accent transition-opacity duration-200 group-hover:opacity-100 motion-reduce:transition-none"
+      />
     </Link>
   )
 }
 
 export function MovieCardSkeleton() {
   return (
-    <div className="overflow-hidden rounded-md bg-surface shadow-[0_1px_2px_rgba(28,25,23,0.04),0_6px_16px_-4px_rgba(28,25,23,0.10)] ring-1 ring-black/5">
+    <div className="flex flex-col bg-surface">
       <div className="flex aspect-2/3 w-full animate-pulse items-center justify-center bg-surface-muted">
         <CircleNotch
           size={28}
@@ -79,7 +92,7 @@ export function MovieCardSkeleton() {
           aria-hidden="true"
         />
       </div>
-      <div className="space-y-2 p-3.5">
+      <div className="space-y-2 p-3">
         <div className="h-3.5 w-4/5 animate-pulse rounded bg-surface-muted" />
         <div className="h-3 w-1/3 animate-pulse rounded bg-surface-muted" />
       </div>

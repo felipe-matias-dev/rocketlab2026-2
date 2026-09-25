@@ -45,9 +45,27 @@ interface CatalogData {
 
 function CatalogGrid({ children }: { children: React.ReactNode }) {
   return (
-    <div className="grid grid-cols-2 gap-6 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+    <div className="grid grid-cols-2 gap-px bg-border sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
       {children}
     </div>
+  )
+}
+
+// Posição real do filme na lista ordenada/filtrada atual — o número do quadro na prancha de
+// contato, não um id inventado. Padded pro tamanho do maior número da lista atual.
+function frameNumberFor(position: number, total: number): string {
+  const width = Math.max(2, String(total).length)
+  return String(position).padStart(width, '0')
+}
+
+// Marca de registro de impressão, uma nas quatro quinas da folha — a única flor de
+// composição "impressa" da página; tudo mais no conteúdo fica sóbrio.
+function RegistrationMark({ className }: { className: string }) {
+  return (
+    <span className={`pointer-events-none absolute z-10 h-3 w-3 ${className}`} aria-hidden="true">
+      <span className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-ink-muted/50" />
+      <span className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-ink-muted/50" />
+    </span>
   )
 }
 
@@ -228,121 +246,128 @@ function CatalogPage() {
     <div>
       <FeaturedMovie />
 
-      <div className="rounded-md bg-surface p-4 shadow-[0_1px_2px_rgba(28,25,23,0.04),0_8px_20px_-6px_rgba(28,25,23,0.08)] ring-1 ring-black/5">
-        <div className="flex flex-wrap items-center gap-3">
-          <SearchBar value={textInput.q} onChange={(value) => updateTextFilter('q', value)} />
-          <div className="ml-auto flex flex-wrap items-center gap-3">
-            <SortControl sort={sort} order={order} onSortChange={changeSort} onOrderChange={changeOrder} />
-            <button
-              type="button"
-              onClick={toggleFilters}
-              aria-expanded={filtersOpen}
-              className={`flex items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium ${pressableClass} ${focusRingClass} ${
-                filtersOpen
-                  ? 'border-accent text-ink'
-                  : 'border-border text-ink hover:border-accent'
-              }`}
-            >
-              <Funnel size={18} />
-              Filtros
-              {advancedFilterCount > 0 && (
-                <span
-                  key={advancedFilterCount}
-                  className="flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1 text-xs font-semibold text-ink motion-safe:animate-pop-in motion-reduce:animate-none"
-                >
-                  {advancedFilterCount}
-                </span>
-              )}
-            </button>
+      <div className="relative border border-border bg-surface">
+        <RegistrationMark className="-top-1.5 -left-1.5" />
+        <RegistrationMark className="-top-1.5 -right-1.5" />
+        <RegistrationMark className="-bottom-1.5 -left-1.5" />
+        <RegistrationMark className="-bottom-1.5 -right-1.5" />
+        <div className="p-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <SearchBar value={textInput.q} onChange={(value) => updateTextFilter('q', value)} />
+            <div className="ml-auto flex flex-wrap items-center gap-3">
+              <SortControl sort={sort} order={order} onSortChange={changeSort} onOrderChange={changeOrder} />
+              <button
+                type="button"
+                onClick={toggleFilters}
+                aria-expanded={filtersOpen}
+                className={`flex items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium ${pressableClass} ${focusRingClass} ${
+                  filtersOpen
+                    ? 'border-accent text-ink'
+                    : 'border-border text-ink hover:border-accent'
+                }`}
+              >
+                <Funnel size={18} />
+                Filtros
+                {advancedFilterCount > 0 && (
+                  <span
+                    key={advancedFilterCount}
+                    className="flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1 text-xs font-semibold text-ink motion-safe:animate-pop-in motion-reduce:animate-none"
+                  >
+                    {advancedFilterCount}
+                  </span>
+                )}
+              </button>
+            </div>
           </div>
-        </div>
 
-        {advancedFilterCount > 0 && (
-          <div className="mt-3">
-            <ActiveFilterChips
-              genres={genres}
-              selectedGenreIds={genreIds}
-              onToggleGenre={toggleGenre}
-              director={textFilters.director}
-              onDirectorChange={() => setConfirmedTextFilter('director', '')}
-              yearFrom={textFilters.yearFrom}
-              yearTo={textFilters.yearTo}
-              onYearFromChange={() => setConfirmedTextFilter('yearFrom', '')}
-              onYearToChange={() => setConfirmedTextFilter('yearTo', '')}
-              ratingMin={textFilters.ratingMin}
-              onRatingMinChange={() => setConfirmedTextFilter('ratingMin', '')}
-              onClearAll={clearFilters}
-            />
-          </div>
-        )}
-
-        <div
-          className={`grid transition-[grid-template-rows] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none ${
-            filtersOpen ? 'mt-4 grid-rows-[1fr]' : 'grid-rows-[0fr]'
-          }`}
-        >
-          <div className={`min-h-0 ${filtersExpanded ? '' : 'overflow-hidden'}`} inert={!filtersOpen}>
-            <div
-              className={`border-t border-border pt-4 transition-opacity duration-200 motion-reduce:transition-none ${
-                filtersOpen ? 'opacity-100 delay-100' : 'opacity-0'
-              }`}
-            >
-              <FilterBar
+          {advancedFilterCount > 0 && (
+            <div className="mt-3">
+              <ActiveFilterChips
                 genres={genres}
                 selectedGenreIds={genreIds}
                 onToggleGenre={toggleGenre}
                 director={textFilters.director}
-                onDirectorChange={(value) => setConfirmedTextFilter('director', value)}
-                yearFrom={textInput.yearFrom}
-                yearTo={textInput.yearTo}
-                onYearFromChange={(value) => updateTextFilter('yearFrom', value)}
-                onYearToChange={(value) => updateTextFilter('yearTo', value)}
-                ratingMin={textInput.ratingMin}
-                onRatingMinChange={(value) => updateTextFilter('ratingMin', value)}
-                hasActiveFilters={hasActiveFilters}
-                onClear={clearFilters}
+                onDirectorChange={() => setConfirmedTextFilter('director', '')}
+                yearFrom={textFilters.yearFrom}
+                yearTo={textFilters.yearTo}
+                onYearFromChange={() => setConfirmedTextFilter('yearFrom', '')}
+                onYearToChange={() => setConfirmedTextFilter('yearTo', '')}
+                ratingMin={textFilters.ratingMin}
+                onRatingMinChange={() => setConfirmedTextFilter('ratingMin', '')}
+                onClearAll={clearFilters}
               />
+            </div>
+          )}
+
+          <div
+            className={`grid transition-[grid-template-rows] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none ${
+              filtersOpen ? 'mt-4 grid-rows-[1fr]' : 'grid-rows-[0fr]'
+            }`}
+          >
+            <div className={`min-h-0 ${filtersExpanded ? '' : 'overflow-hidden'}`} inert={!filtersOpen}>
+              <div
+                className={`border-t border-border pt-4 transition-opacity duration-200 motion-reduce:transition-none ${
+                  filtersOpen ? 'opacity-100 delay-100' : 'opacity-0'
+                }`}
+              >
+                <FilterBar
+                  genres={genres}
+                  selectedGenreIds={genreIds}
+                  onToggleGenre={toggleGenre}
+                  director={textFilters.director}
+                  onDirectorChange={(value) => setConfirmedTextFilter('director', value)}
+                  yearFrom={textInput.yearFrom}
+                  yearTo={textInput.yearTo}
+                  onYearFromChange={(value) => updateTextFilter('yearFrom', value)}
+                  onYearToChange={(value) => updateTextFilter('yearTo', value)}
+                  ratingMin={textInput.ratingMin}
+                  onRatingMinChange={(value) => updateTextFilter('ratingMin', value)}
+                  hasActiveFilters={hasActiveFilters}
+                  onClear={clearFilters}
+                />
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <div className="mt-6">
-        {error && <p className="text-destructive">{error}</p>}
+        <div className="border-t border-border p-4 sm:p-6">
+          {error && <p className="text-destructive">{error}</p>}
 
-        {!error && movies === null && (
-          <CatalogGrid>
-            {Array.from({ length: PAGE_SIZE }, (_, index) => (
-              <MovieCardSkeleton key={index} />
-            ))}
-          </CatalogGrid>
-        )}
-
-        {!error && movies !== null && movies.length === 0 && (
-          <p className="text-ink-muted">
-            {hasActiveFilters
-              ? 'Nenhum filme encontrado para esses filtros.'
-              : 'Nenhum filme encontrado.'}
-          </p>
-        )}
-
-        {!error && data !== null && movies !== null && movies.length > 0 && (
-          <>
-            <p className="mb-3 text-sm text-ink-muted">
-              {data.total.toLocaleString('pt-BR')} {data.total === 1 ? 'filme encontrado' : 'filmes encontrados'}
-            </p>
+          {!error && movies === null && (
             <CatalogGrid>
-              {movies.map((movie, index) => (
-                <MovieCard
-                  key={movie.sk_movie_id}
-                  movie={movie}
-                  entranceDelayMs={data.animateEntrance ? staggerDelayMs(index) : undefined}
-                />
+              {Array.from({ length: PAGE_SIZE }, (_, index) => (
+                <MovieCardSkeleton key={index} />
               ))}
             </CatalogGrid>
-            <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
-          </>
-        )}
+          )}
+
+          {!error && movies !== null && movies.length === 0 && (
+            <p className="text-ink-muted">
+              {hasActiveFilters
+                ? 'Nenhum filme encontrado para esses filtros.'
+                : 'Nenhum filme encontrado.'}
+            </p>
+          )}
+
+          {!error && data !== null && movies !== null && movies.length > 0 && (
+            <>
+              <p className="mb-3 text-sm text-ink-muted">
+                {data.total.toLocaleString('pt-BR')} {data.total === 1 ? 'filme encontrado' : 'filmes encontrados'}
+              </p>
+              <CatalogGrid>
+                {movies.map((movie, index) => (
+                  <MovieCard
+                    key={movie.sk_movie_id}
+                    movie={movie}
+                    frameNumber={frameNumberFor((page - 1) * PAGE_SIZE + index + 1, data.total)}
+                    entranceDelayMs={data.animateEntrance ? staggerDelayMs(index) : undefined}
+                  />
+                ))}
+              </CatalogGrid>
+              <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+            </>
+          )}
+        </div>
       </div>
     </div>
   )

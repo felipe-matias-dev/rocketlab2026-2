@@ -48,6 +48,16 @@ scale (the rating scale is numeric 0-10 - see PRODUCT.md). A 10-star widget mapp
 existing 0-10 scale (continuous fill, one star per point) is fine - it's a display convention for
 the same numeric scale, not a different scale.
 
+**Catalog surface revision ("The Contact Sheet"):** the first cut of the catalog (poster hero +
+shadowed card grid) still read as a generic streaming-browse page despite the ledger intent on
+paper - the shadowed, uniformly-rounded card grid is the same "SaaS card kit" pattern any movie
+app ships, not a considered choice. The catalog view (grid, toolbar, featured pick) was rebuilt
+around a photographer's contact sheet - a light table of numbered negative frames a human
+circles and corrects - while keeping every existing color, type, and motion token. See
+**Catalog Frames** below. Movie detail, forms, and the rest of the app still follow the plain
+ledger language described in this file until they get their own pass; this is a surface-scoped
+revision (`grain: view`), not a full rebrand.
+
 **Key Characteristics:**
 - Warm stone surfaces (not cool zinc) with a single amber accent, used consistently everywhere
   (buttons, links, active states, rating emphasis) rather than scattered accent colors. The page
@@ -121,20 +131,49 @@ within the one family, not a second typeface.
 ## Layout
 
 Standard content width capped at `max-w-7xl`, centered. Catalog renders as a responsive CSS
-grid (never flex-percentage math), collapsing to a single column below `md`. Spacing scale is
+grid (never flex-percentage math), collapsing to 2 columns below `sm`. Spacing scale is
 Tailwind's default (`spacing.sm/md/lg` above map to `2/4/6`); section padding stays moderate
-(`py-8`-`py-12`), not gallery-airy, since this is a scanning tool used for long sessions.
+(`py-8`-`py-12`), not gallery-airy, since this is a scanning tool used for long sessions. The
+catalog's toolbar and grid live in one bordered sheet (see Catalog Frames), not two separate
+floating panels.
+
+## Catalog Frames
+
+The catalog grid is one continuous sheet, not a field of independently-elevated cards:
+`CatalogGrid` lays movie frames on a 1px `border-border` gap (the classic hairline-grid technique
+- no per-card shadow, no per-card radius), inside one bordered panel that also holds the
+search/sort/filter row - a single ruled sheet, never two floating white blocks stacked with a gap
+between them. Four small `RegistrationMark` crosshairs sit at the sheet's own corners, straddling
+its border - the one printed-page flourish on the surface; everything else stays quiet.
+
+Each `MovieCard` is a square-cornered frame (deliberately breaking the One Radius Rule below -
+documented here as the one allowed exception, scoped to catalog frames only, never introduced
+elsewhere): a real frame number (`frameNumberFor`, the item's actual position in the current
+sorted/filtered result, zero-padded to the result count's width) sits in the top-left corner, and
+a circled rating (an outlined Amber ring around the number, not a filled pill) sits top-right when
+`qtd_avaliacoes > 0`. A movie with no poster gets a clipped corner (`clip-path`) on its
+placeholder instead of a text label - a structural "blank negative" mark. A movie with no reviews
+keeps a plain `Sem avaliações` caption below the title (data-quality states are drawn structurally
+where a mark reads clearly on sight; text stays where dropping it would cost legibility for no
+real gain). Hover/focus is an inset Amber ring on the frame, not the lift-and-scale used
+elsewhere in the app before this revision - a flat sheet's frames don't float.
+
+The featured pick reuses the same frame grammar (hairline border, circled rating, clipped corner)
+but is pulled out of the numbered sequence and set at a slight rotation with a full Amber ring
+drawn around it - a frame lifted off the sheet for a closer look, not a marketing banner. Its
+caption states plainly what it is ("Em destaque · sorteado entre os mais bem avaliados") rather
+than leaning on the contact-sheet metaphor in the copy itself - the visual grammar carries the
+metaphor, the words just say what's actually happening.
 
 ## Elevation & Depth
 
-Revised from the original all-flat spec: movie cards and floating panels (the catalog search/
-filter bar) carry a soft, two-layer shadow tinted from Ink rather than pure black
-(`rgba(28,25,23,…)`), plus a hairline `ring-black/5` for a crisp edge - never a `neutral-border`
-outline alone. Cards lift further on hover/focus (deeper shadow, slight upward translate, ring
-tinted Amber) as interactive feedback. Modals/dialogs keep their own single, more pronounced
-shadow layer to still read as the most elevated layer on the page. Static, non-interactive text
-and inline controls (labels, plain body copy) stay flat; shadow is reserved for surfaces the user
-scans or clicks into (cards, panels, modals), not for decoration.
+Revised from the original all-flat spec: floating panels and modals/dialogs carry a soft,
+two-layer shadow tinted from Ink rather than pure black (`rgba(28,25,23,…)`), plus a hairline
+`ring-black/5` for a crisp edge - never a `neutral-border` outline alone. Modals/dialogs keep
+their own single, more pronounced shadow layer to still read as the most elevated layer on the
+page. Static, non-interactive text and inline controls (labels, plain body copy) stay flat.
+**Catalog frames are the one exception:** per Catalog Frames above, they carry no shadow at all -
+a flat, bordered sheet is the point, not a lapse.
 
 ## Motion
 
@@ -165,9 +204,10 @@ Motion serves feedback, state, and continuity - never decoration or page-load ch
 ## Shapes
 
 **The One Radius Rule.** Every card, input, button, and modal uses the same 8px radius
-(`rounded.md`). The only exception is badges/pills (genre tags, rating chip), which use full
-pill radius (`rounded.full`) - documented here as the one allowed deviation, never introduced
-elsewhere.
+(`rounded.md`). Two documented exceptions, both named here and never extended further: badges/
+pills (genre tags, rating chip) use full pill radius (`rounded.full`); catalog frames (movie
+cards, the featured pick) are square-cornered per Catalog Frames above, since a contact-sheet
+negative doesn't have rounded corners.
 
 ## Do's and Don'ts
 
