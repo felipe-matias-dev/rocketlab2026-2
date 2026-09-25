@@ -5,6 +5,7 @@ import { ApiError } from '../api/client'
 import { createReview } from '../api/movies'
 import { pressableClass } from '../styles/motion'
 import type { Review } from '../types/review'
+import { getReviewerName } from '../utils/reviewerName'
 import ScoreInput from './ScoreInput'
 
 interface ReviewFormProps {
@@ -13,8 +14,7 @@ interface ReviewFormProps {
 }
 
 function ReviewForm({ movieId, onCreated }: ReviewFormProps) {
-  const [nome, setNome] = useState('')
-  const [nota, setNota] = useState('')
+  const [nota, setNota] = useState<number | null>(null)
   const [comentario, setComentario] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -22,17 +22,22 @@ function ReviewForm({ movieId, onCreated }: ReviewFormProps) {
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError(null)
+
+    if (nota === null) {
+      setError('Selecione uma nota antes de enviar.')
+      return
+    }
+
     setSubmitting(true)
 
     try {
       const review = await createReview(movieId, {
-        nome: nome.trim(),
-        nota: Number(nota),
+        nome: getReviewerName() ?? '',
+        nota,
         comentario: comentario.trim(),
       })
       onCreated(review)
-      setNome('')
-      setNota('')
+      setNota(null)
       setComentario('')
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Erro ao enviar avaliação.')
@@ -43,21 +48,6 @@ function ReviewForm({ movieId, onCreated }: ReviewFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-      <div className="flex flex-col gap-1">
-        <label htmlFor="review-nome" className="text-sm font-medium text-ink">
-          Nome
-        </label>
-        <input
-          id="review-nome"
-          type="text"
-          required
-          maxLength={120}
-          value={nome}
-          onChange={(event) => setNome(event.target.value)}
-          className="rounded-md border border-border bg-surface px-3 py-2 text-sm text-ink focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
-        />
-      </div>
-
       <ScoreInput id="review-nota" value={nota} onChange={setNota} />
 
       <div className="flex flex-col gap-1">

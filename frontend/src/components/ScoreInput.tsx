@@ -1,26 +1,38 @@
+import { useState } from 'react'
+
+import StarSlider from './StarSlider'
+
 interface ScoreInputProps {
   id: string
-  value: string
-  onChange: (value: string) => void
+  value: number | null
+  onChange: (value: number) => void
 }
 
-/** Nota na escala 0-10 do banco — nunca um widget de 5 estrelas (ver DESIGN.md). */
+/** Nota na escala 0-10 do banco, via faixa de 10 estrelas com preenchimento contínuo (não 5
+ * estrelas / escala 1-5 — ver DESIGN.md). */
 function ScoreInput({ id, value, onChange }: ScoreInputProps) {
+  const [commitToken, setCommitToken] = useState(0)
+
   return (
     <div className="flex flex-col gap-1">
-      <label htmlFor={id} className="text-sm font-medium text-ink">
-        Nota (0 a 10)
-      </label>
-      <input
+      <div className="flex items-center justify-between">
+        <label htmlFor={id} className="text-sm font-medium text-ink">
+          Nota (0 a 10)
+        </label>
+        <span
+          key={commitToken}
+          className={`text-sm font-medium tabular-nums text-accent ${
+            commitToken > 0 ? 'motion-safe:animate-star-pulse motion-reduce:animate-none' : ''
+          }`}
+        >
+          {value === null ? '—' : value.toFixed(1)}
+        </span>
+      </div>
+      <StarSlider
         id={id}
-        type="number"
-        required
-        min={0}
-        max={10}
-        step={0.1}
         value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="w-24 rounded-md border border-border bg-surface px-3 py-2 text-sm text-ink focus:border-accent focus:ring-1 focus:ring-accent focus:outline-none"
+        onChange={onChange}
+        onCommit={() => setCommitToken((token) => token + 1)}
       />
     </div>
   )

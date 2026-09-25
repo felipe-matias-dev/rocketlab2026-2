@@ -218,85 +218,89 @@ function MovieDetailPage() {
         </div>
       </div>
 
-      <div className="mt-4 flex flex-col gap-6 sm:flex-row">
-        <div className="aspect-2/3 w-full max-w-56 shrink-0 overflow-hidden rounded-md border border-border bg-surface-muted">
-          {movie.url_poster ? (
-            <img
-              src={movie.url_poster}
-              alt={movie.titulo}
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center text-ink-muted/40">
-              <FilmSlate size={56} weight="light" />
+      <div className="mt-4 lg:grid lg:grid-cols-[minmax(0,1fr)_380px] lg:items-start lg:gap-10">
+        <div>
+          <div className="flex flex-col gap-6 sm:flex-row">
+            <div className="aspect-2/3 w-full max-w-56 shrink-0 overflow-hidden rounded-md border border-border bg-surface-muted">
+              {movie.url_poster ? (
+                <img
+                  src={movie.url_poster}
+                  alt={movie.titulo}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-ink-muted/40">
+                  <FilmSlate size={56} weight="light" />
+                </div>
+              )}
             </div>
-          )}
-        </div>
 
-        <div className="flex flex-1 flex-col gap-3">
-          <h1 className="text-2xl font-semibold text-ink">{movie.titulo}</h1>
+            <div className="flex flex-1 flex-col gap-3">
+              <h1 className="text-2xl font-semibold text-ink">{movie.titulo}</h1>
 
-          <div className="flex flex-wrap items-center gap-3 text-sm text-ink-muted">
-            <span>{movie.ano_lancamento ?? 'Ano desconhecido'}</span>
-            {movie.duracao_minutos !== null && <span>{movie.duracao_minutos} min</span>}
-            {movie.status_filme && <span>{movie.status_filme}</span>}
-            <span className="flex items-center gap-1 text-ink">
-              <Star size={14} weight="fill" className="text-accent" />
-              {movie.nota_media !== null
-                ? `${movie.nota_media.toFixed(1)} (${movie.qtd_avaliacoes})`
-                : 'Sem avaliações'}
-            </span>
+              <div className="flex flex-wrap items-center gap-3 text-sm text-ink-muted">
+                <span>{movie.ano_lancamento ?? 'Ano desconhecido'}</span>
+                {movie.duracao_minutos !== null && <span>{movie.duracao_minutos} min</span>}
+                {movie.status_filme && <span>{movie.status_filme}</span>}
+                <span className="flex items-center gap-1 text-ink">
+                  <Star size={14} weight="fill" className="text-accent" />
+                  {movie.nota_media !== null
+                    ? `${movie.nota_media.toFixed(1)} (${movie.qtd_avaliacoes})`
+                    : 'Sem avaliações'}
+                </span>
+              </div>
+
+              {movie.genres.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {movie.genres.map((genre) => (
+                    <span
+                      key={genre.sk_genre_id}
+                      className="rounded-full border border-border px-2.5 py-0.5 text-xs text-ink-muted"
+                    >
+                      {translateGenreName(genre.nome_genero)}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {movie.sinopse && <p className="text-sm text-ink">{movie.sinopse}</p>}
+
+              <CreditsSection people={movie.people} />
+
+              {movie.companies.length > 0 && (
+                <p className="flex flex-wrap items-center gap-2 text-sm text-ink-muted">
+                  <span>Produtoras:</span>
+                  {movie.companies.map((company) => (
+                    <span
+                      key={company.sk_company_id}
+                      className="rounded-full border border-border px-2.5 py-0.5 text-xs"
+                    >
+                      {company.nome_produtora}
+                    </span>
+                  ))}
+                </p>
+              )}
+            </div>
           </div>
 
-          {movie.genres.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {movie.genres.map((genre) => (
-                <span
-                  key={genre.sk_genre_id}
-                  className="rounded-full border border-border px-2.5 py-0.5 text-xs text-ink-muted"
-                >
-                  {translateGenreName(genre.nome_genero)}
-                </span>
-              ))}
-            </div>
-          )}
-
-          {movie.sinopse && <p className="text-sm text-ink">{movie.sinopse}</p>}
-
-          <CreditsSection people={movie.people} />
-
-          {movie.companies.length > 0 && (
-            <p className="flex flex-wrap items-center gap-2 text-sm text-ink-muted">
-              <span>Produtoras:</span>
-              {movie.companies.map((company) => (
-                <span
-                  key={company.sk_company_id}
-                  className="rounded-full border border-border px-2.5 py-0.5 text-xs"
-                >
-                  {company.nome_produtora}
-                </span>
-              ))}
-            </p>
-          )}
+          <MetricsSection movie={movie} />
         </div>
+
+        <section className="mt-10 flex flex-col gap-10 lg:mt-0">
+          <div>
+            <h2 className="text-lg font-semibold text-ink">Avaliações</h2>
+            <div className="mt-4">
+              <ReviewList reviews={movie.reviews} />
+            </div>
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold text-ink">Avaliar este filme</h2>
+            <div className="mt-4">
+              <ReviewForm movieId={movie.sk_movie_id} onCreated={handleReviewCreated} />
+            </div>
+          </div>
+        </section>
       </div>
-
-      <MetricsSection movie={movie} />
-
-      <section className="mt-10 grid gap-10 md:grid-cols-2">
-        <div>
-          <h2 className="text-lg font-semibold text-ink">Avaliações</h2>
-          <div className="mt-4">
-            <ReviewList reviews={movie.reviews} />
-          </div>
-        </div>
-        <div>
-          <h2 className="text-lg font-semibold text-ink">Avaliar este filme</h2>
-          <div className="mt-4">
-            <ReviewForm movieId={movie.sk_movie_id} onCreated={handleReviewCreated} />
-          </div>
-        </div>
-      </section>
     </div>
   )
 }

@@ -43,8 +43,10 @@ the data. Density is moderate: comfortable enough to scan a grid of movie cards 
 stretches, not so airy that pagination feels wasteful, not so tight that it reads as a cockpit.
 
 Confirmed visual rejections: no purple/blue AI-gradient default, no glassmorphism, no dark-mode
-requirement in the MVP, no external font dependency, no 5-star iconography (the rating scale is
-numeric 0-10, not 1-5 stars - see PRODUCT.md).
+requirement in the MVP, no external font dependency, no 5-star iconography implying a 1-5 scale
+(the rating scale is numeric 0-10 - see PRODUCT.md). A 10-star widget mapped 1:1 to the existing
+0-10 scale (continuous fill, one star per point) is fine - it's a display convention for the same
+numeric scale, not a different scale.
 
 **Key Characteristics:**
 - Warm stone surfaces (not cool zinc) with a single amber accent, used consistently everywhere
@@ -154,7 +156,8 @@ elsewhere.
 - **Do** keep Amber as the only accent color across every screen.
 - **Do** use the system font stack; do not add a web font later without revisiting this file.
 - **Do** keep buttons/cards/inputs on the single 8px radius scale.
-- **Do** show a numeric 0-10 rating input/display, never a 5-star widget implying a 1-5 scale.
+- **Do** show a numeric 0-10 rating input/display; a 10-star continuous-fill widget mapped 1:1 to
+  the 0-10 scale is acceptable, but never a 5-star widget implying a 1-5 scale.
 - **Do** design empty/loading/error states for the catalog and detail views - the real dataset
   has movies with no poster (~9%) and no reviews (most of them); these are not edge cases.
 
