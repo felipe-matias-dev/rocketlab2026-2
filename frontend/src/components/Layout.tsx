@@ -18,32 +18,37 @@ function Layout() {
       <ToastProvider>
         <div className="min-h-dvh bg-paper text-ink">
           <header className="border-b border-border">
-            <nav className="mx-auto grid max-w-7xl grid-cols-[1fr_auto_1fr] items-center gap-6 px-4 py-4">
-              <Link to="/" className={`flex w-fit items-center gap-1 rounded-md ${focusRingClass}`}>
-                <img src="/logo.svg" alt="" className="h-15 w-auto" />
-                <span className="leading-tight">
-                  <span className="block text-lg font-semibold tracking-tight text-ink">
-                    ROCKET <span className="text-accent">LAB</span>
+            <div className="mx-auto max-w-7xl px-4 py-3 sm:py-4">
+              <nav className="flex items-center justify-between gap-3 sm:grid sm:grid-cols-[1fr_auto_1fr] sm:gap-6">
+                <Link to="/" className={`flex w-fit shrink-0 items-center gap-1 rounded-md ${focusRingClass}`}>
+                  <img src="/logo.svg" alt="" className="h-10 w-auto sm:h-15" />
+                  <span className="leading-tight">
+                    <span className="block text-base font-semibold tracking-tight text-ink sm:text-lg">
+                      ROCKET <span className="text-accent">LAB</span>
+                    </span>
+                    <span className="hidden text-[10px] font-medium uppercase tracking-widest text-ink-muted sm:block">
+                      Movie Admin
+                    </span>
                   </span>
-                  <span className="block text-[10px] font-medium uppercase tracking-widest text-ink-muted">
-                    Movie Admin
-                  </span>
-                </span>
-              </Link>
-              <div className="text-center">
-                {title && <h1 className="text-lg font-semibold text-ink">{title}</h1>}
-              </div>
-              <div className="flex justify-end">
-                {!hideCreateAction && (
-                  <Link
-                    to="/movies/new"
-                    className={`rounded-md bg-accent px-4 py-2 text-sm font-medium text-ink hover:bg-accent-hover ${pressableClass} ${focusRingClass}`}
-                  >
-                    Cadastrar filme
-                  </Link>
-                )}
-              </div>
-            </nav>
+                </Link>
+                <div className="hidden text-center sm:block">
+                  {title && <h1 className="text-lg font-semibold text-ink">{title}</h1>}
+                </div>
+                <div className="flex shrink-0 justify-end">
+                  {!hideCreateAction && (
+                    <Link
+                      to="/movies/new"
+                      className={`whitespace-nowrap rounded-md bg-accent px-3 py-2 text-sm font-medium text-ink hover:bg-accent-hover sm:px-4 ${pressableClass} ${focusRingClass}`}
+                    >
+                      Cadastrar filme
+                    </Link>
+                  )}
+                </div>
+              </nav>
+              {title && (
+                <h1 className="mt-2 text-center text-base font-semibold text-ink sm:hidden">{title}</h1>
+              )}
+            </div>
           </header>
           <main className="mx-auto max-w-7xl px-4 py-8">
             <Outlet />
