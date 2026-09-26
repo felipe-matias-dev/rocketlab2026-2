@@ -53,9 +53,12 @@ Confirmed via `requisitos.md` and the approved implementation plan:
 - Movie genre is chosen from a fixed existing list (`GET /genres`); a movie's director is
   free-text with get-or-create semantics server-side. Cast/crew beyond director are read-only
   data imported from CSV, not editable via the admin form in the MVP.
-- Explicitly out of scope for the MVP (may return as a later phase, not now): automated test
-  coverage beyond the backend's own suite, authentication, advanced filters, storybook,
-  response caching.
+- Catalog filters (genre, director, year range, rating range) and sorting (including by review
+  count), plus a read-only analytics dashboard, were implemented as the assignment's optional
+  "explore your creativity" extras — see commit history for `feat:` entries beyond the 7
+  mandatory requirements.
+- Explicitly out of scope for the MVP (may return as a later phase, not now): authentication,
+  storybook, response caching.
 
 ## Brand Commitments
 
