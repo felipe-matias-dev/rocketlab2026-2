@@ -10,12 +10,7 @@ import RankingList from '../components/dashboard/RankingList'
 import RatingHistogramChart from '../components/dashboard/RatingHistogramChart'
 import StatTile, { StatTileSkeleton } from '../components/dashboard/StatTile'
 import type { DashboardSummary } from '../types/dashboard'
-
-function formatUsdCompact(value: number): string {
-  if (value >= 1_000_000_000) return `US$ ${(value / 1_000_000_000).toFixed(1)}bi`
-  if (value >= 1_000_000) return `US$ ${(value / 1_000_000).toFixed(1)}mi`
-  return `US$ ${value.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}`
-}
+import { formatUsdCompact } from '../utils/format'
 
 function DashboardPage() {
   const [data, setData] = useState<DashboardSummary | null>(null)

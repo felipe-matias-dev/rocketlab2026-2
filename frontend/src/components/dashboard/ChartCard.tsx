@@ -1,8 +1,9 @@
 import { CircleNotch } from '@phosphor-icons/react'
 import type { ReactNode } from 'react'
 
-const cardClass =
-  'rounded-md bg-surface p-4 shadow-[0_4px_8px_rgba(28,25,23,0.06),0_20px_32px_-8px_rgba(28,25,23,0.18)] ring-1 ring-black/5 sm:p-6'
+import { dashboardCardClass } from '../../styles/card'
+
+const cardClass = `${dashboardCardClass} sm:p-6`
 
 interface ChartCardProps {
   title: string

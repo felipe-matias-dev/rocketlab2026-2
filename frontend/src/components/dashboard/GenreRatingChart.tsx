@@ -1,6 +1,7 @@
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
 import { chartColors } from '../../styles/chartColors'
+import { chartTooltipProps } from '../../styles/chartTooltip'
 import type { GenreRatingBreakdown } from '../../types/dashboard'
 
 function GenreRatingChart({ data }: { data: GenreRatingBreakdown[] }) {
@@ -30,17 +31,7 @@ function GenreRatingChart({ data }: { data: GenreRatingBreakdown[] }) {
           axisLine={false}
           tickLine={false}
         />
-        <Tooltip
-          cursor={{ fill: chartColors.surfaceMuted }}
-          contentStyle={{
-            backgroundColor: chartColors.surface,
-            border: `1px solid ${chartColors.border}`,
-            borderRadius: 8,
-            fontSize: 12,
-          }}
-          labelStyle={{ color: chartColors.ink }}
-          formatter={(value: number) => value.toFixed(1)}
-        />
+        <Tooltip {...chartTooltipProps} formatter={(value: number) => value.toFixed(1)} />
         <Bar dataKey="nota" name="Nota média" fill={chartColors.accent} radius={[0, 4, 4, 0]} />
       </BarChart>
     </ResponsiveContainer>

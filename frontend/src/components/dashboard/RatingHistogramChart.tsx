@@ -1,6 +1,7 @@
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
 import { chartColors } from '../../styles/chartColors'
+import { chartTooltipProps } from '../../styles/chartTooltip'
 import type { RatingBucket } from '../../types/dashboard'
 
 function RatingHistogramChart({ data }: { data: RatingBucket[] }) {
@@ -25,16 +26,7 @@ function RatingHistogramChart({ data }: { data: RatingBucket[] }) {
           tickLine={false}
           allowDecimals={false}
         />
-        <Tooltip
-          cursor={{ fill: chartColors.surfaceMuted }}
-          contentStyle={{
-            backgroundColor: chartColors.surface,
-            border: `1px solid ${chartColors.border}`,
-            borderRadius: 8,
-            fontSize: 12,
-          }}
-          labelStyle={{ color: chartColors.ink }}
-        />
+        <Tooltip {...chartTooltipProps} />
         <Bar dataKey="qtd" name="Avaliações" fill={chartColors.accent} radius={[4, 4, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
