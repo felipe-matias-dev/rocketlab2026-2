@@ -33,7 +33,7 @@ class InvalidGenreError(ValueError):
         self.genre_id = genre_id
 
 
-def _reviews_aggregate():
+def reviews_aggregate():
     return (
         select(
             MovieReview.sk_movie_id,
@@ -67,7 +67,7 @@ async def list_movies(
     filtram pela nota média das avaliações de usuários (não pela nota do TMDB).
     """
 
-    reviews_agg = _reviews_aggregate()
+    reviews_agg = reviews_aggregate()
 
     filters = []
     if q:

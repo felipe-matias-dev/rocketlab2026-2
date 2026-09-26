@@ -48,6 +48,7 @@ bridge_movie_genre = Table(
         String(64),
         ForeignKey("dim_genres.sk_genre_id", ondelete="CASCADE"),
         primary_key=True,
+        index=True,
     ),
 )
 
@@ -180,7 +181,7 @@ class DimPerson(Base):
         String(64), primary_key=True, default=generate_surrogate_key
     )
     nome_pessoa: Mapped[str] = mapped_column(String(255), index=True)
-    tipo_pessoa: Mapped[PersonType] = mapped_column(String(20))
+    tipo_pessoa: Mapped[PersonType] = mapped_column(String(20), index=True)
 
     movies: Mapped[list[DimMovie]] = relationship(
         secondary=bridge_movie_person, back_populates="people"

@@ -1,4 +1,4 @@
-import { Link, Outlet, useMatches } from 'react-router-dom'
+import { Link, NavLink, Outlet, useMatches } from 'react-router-dom'
 
 import { focusRingClass } from '../styles/interactive'
 import { pressableClass } from '../styles/motion'
@@ -20,17 +20,29 @@ function Layout() {
           <header className="border-b border-border">
             <div className="mx-auto max-w-7xl px-4 py-3 sm:py-4">
               <nav className="flex items-center justify-between gap-3 sm:grid sm:grid-cols-[1fr_auto_1fr] sm:gap-6">
-                <Link to="/" className={`flex w-fit shrink-0 items-center gap-1 rounded-md ${focusRingClass}`}>
-                  <img src="/logo.svg" alt="" className="h-10 w-auto sm:h-15" />
-                  <span className="leading-tight">
-                    <span className="block text-base font-semibold tracking-tight text-ink sm:text-lg">
-                      ROCKET <span className="text-accent">LAB</span>
+                <div className="flex min-w-0 shrink-0 items-center gap-4">
+                  <Link to="/" className={`flex w-fit shrink-0 items-center gap-1 rounded-md ${focusRingClass}`}>
+                    <img src="/logo.svg" alt="" className="h-10 w-auto sm:h-15" />
+                    <span className="leading-tight">
+                      <span className="block text-base font-semibold tracking-tight text-ink sm:text-lg">
+                        ROCKET <span className="text-accent">LAB</span>
+                      </span>
+                      <span className="hidden text-[10px] font-medium uppercase tracking-widest text-ink-muted sm:block">
+                        Movie Admin
+                      </span>
                     </span>
-                    <span className="hidden text-[10px] font-medium uppercase tracking-widest text-ink-muted sm:block">
-                      Movie Admin
-                    </span>
-                  </span>
-                </Link>
+                  </Link>
+                  <NavLink
+                    to="/dashboard"
+                    className={({ isActive }) =>
+                      `shrink-0 rounded-md px-1 py-1 text-sm font-medium ${pressableClass} ${focusRingClass} ${
+                        isActive ? 'text-accent' : 'text-ink-muted hover:text-ink'
+                      }`
+                    }
+                  >
+                    Dashboard
+                  </NavLink>
+                </div>
                 <div className="hidden text-center sm:block">
                   {title && <h1 className="text-lg font-semibold text-ink">{title}</h1>}
                 </div>
