@@ -12,6 +12,7 @@ htmlcov/
 *.db-wal
 *.db-journal
 *.sqlite3
+*.log
 
 # Dados de seed (grandes demais para versionar; ver data/seed/README.md)
 data/seed/csv/*.csv

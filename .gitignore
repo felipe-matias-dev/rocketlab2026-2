@@ -18,3 +18,7 @@ htmlcov/
 # Sistema operacional e IDE
 .DS_Store
 .vscode/
+
+# Artefatos de ferramentas MCP (chrome-devtools/playwright) e logs de servidor
+.playwright-mcp/
+*.log
