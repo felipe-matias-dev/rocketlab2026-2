@@ -244,11 +244,12 @@ async def list_genres(session: AsyncSession) -> list[DimGenre]:
 async def list_directors(
     session: AsyncSession, *, q: str | None = None, limit: int = 20
 ) -> list[str]:
-    """Busca nomes distintos de diretores para o autocomplete do filtro do catálogo.
+    """Busca nomes de diretores por prefixo, para o autocomplete do filtro do catálogo.
 
     A base tem ~65 mil diretores distintos (e nomes bagunçados vindos da fonte de
-    dados), então isso é sempre uma busca por prefixo/trecho com limite, nunca uma
-    listagem completa.
+    dados), então isso é sempre uma busca com limite, nunca uma listagem completa.
+    É busca por prefixo (`q%`), não por trecho em qualquer posição: o índice em
+    (tipo_pessoa, lower(nome_pessoa)) só acelera esse formato de busca.
     """
 
     query = (
@@ -259,7 +260,7 @@ async def list_directors(
         .limit(limit)
     )
     if q:
-        query = query.where(DimPerson.nome_pessoa.ilike(f"%{q}%"))
+        query = query.where(DimPerson.nome_pessoa.ilike(f"{q}%"))
     return list((await session.scalars(query)).all())
 
 

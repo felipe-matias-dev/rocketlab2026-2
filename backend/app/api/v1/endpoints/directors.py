@@ -9,7 +9,7 @@ router = APIRouter()
 
 @router.get("", response_model=list[str])
 async def list_directors(
-    q: str | None = Query(None, description="Busca parcial por nome do diretor"),
+    q: str | None = Query(None, description="Busca por prefixo do nome do diretor"),
     limit: int = Query(20, ge=1, le=50),
     db: AsyncSession = Depends(get_db),
 ) -> list[str]:
