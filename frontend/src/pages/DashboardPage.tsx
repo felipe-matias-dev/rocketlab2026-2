@@ -11,6 +11,7 @@ import RatingHistogramChart from '../components/dashboard/RatingHistogramChart'
 import StatTile, { StatTileSkeleton } from '../components/dashboard/StatTile'
 import type { DashboardSummary } from '../types/dashboard'
 import { formatUsdCompact } from '../utils/format'
+import { movieTitle } from '../utils/movieTitle'
 
 function DashboardPage() {
   const [data, setData] = useState<DashboardSummary | null>(null)
@@ -98,7 +99,7 @@ function DashboardPage() {
             items={data.top_rated_movies.map((movie) => ({
               key: movie.sk_movie_id,
               href: `/movies/${movie.sk_movie_id}`,
-              title: movie.titulo,
+              title: movieTitle(movie.titulo),
               value: movie.nota_media !== null ? movie.nota_media.toFixed(1) : '—',
               subvalue: `${movie.qtd_avaliacoes} aval.`,
             }))}
@@ -110,7 +111,7 @@ function DashboardPage() {
             items={data.most_reviewed_movies.map((movie) => ({
               key: movie.sk_movie_id,
               href: `/movies/${movie.sk_movie_id}`,
-              title: movie.titulo,
+              title: movieTitle(movie.titulo),
               value: `${movie.qtd_avaliacoes}`,
               subvalue: movie.nota_media !== null ? `nota ${movie.nota_media.toFixed(1)}` : undefined,
             }))}
@@ -126,7 +127,7 @@ function DashboardPage() {
             items={data.top_movies_by_revenue.map((movie) => ({
               key: movie.sk_movie_id,
               href: `/movies/${movie.sk_movie_id}`,
-              title: movie.titulo,
+              title: movieTitle(movie.titulo),
               value: movie.receita_usd !== null ? formatUsdCompact(movie.receita_usd) : '—',
             }))}
           />

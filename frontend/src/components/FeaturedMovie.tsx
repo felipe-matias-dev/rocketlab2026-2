@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom'
 import { getMovie, listMovies } from '../api/movies'
 import { focusRingClass } from '../styles/interactive'
 import { translateGenreName } from '../utils/genreLabels'
+import { movieTitle } from '../utils/movieTitle'
 import type { MovieDetail } from '../types/movie'
 
 const MIN_RATING = 8
@@ -112,7 +113,7 @@ function FeaturedMovie() {
         </div>
 
         <div className="min-w-0 flex-1 py-0.5">
-          <h2 className="line-clamp-2 text-base leading-snug font-semibold text-ink">{movie.titulo}</h2>
+          <h2 className="line-clamp-2 text-base leading-snug font-semibold text-ink">{movieTitle(movie.titulo)}</h2>
           <p className="mt-1 text-xs text-ink-muted">
             {movie.ano_lancamento ?? 'Ano desconhecido'}
             {movie.genres.length > 0 &&

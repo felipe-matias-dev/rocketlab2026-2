@@ -11,6 +11,7 @@ import { focusRingClass } from '../styles/interactive'
 import { pressableClass } from '../styles/motion'
 import type { MovieDetail, Person } from '../types/movie'
 import { translateGenreName } from '../utils/genreLabels'
+import { movieTitle } from '../utils/movieTitle'
 import type { Review } from '../types/review'
 
 const CAST_LIMIT = 10
@@ -225,7 +226,7 @@ function MovieDetailPage() {
               {movie.url_poster ? (
                 <img
                   src={movie.url_poster}
-                  alt={movie.titulo}
+                  alt={movieTitle(movie.titulo)}
                   className="h-full w-full object-cover"
                 />
               ) : (
@@ -236,7 +237,7 @@ function MovieDetailPage() {
             </div>
 
             <div className="flex flex-1 flex-col gap-3">
-              <h1 className="text-2xl font-semibold text-ink">{movie.titulo}</h1>
+              <h1 className="text-2xl font-semibold text-ink">{movieTitle(movie.titulo)}</h1>
 
               <div className="flex flex-wrap items-center gap-3 text-sm text-ink-muted">
                 <span>{movie.ano_lancamento ?? 'Ano desconhecido'}</span>

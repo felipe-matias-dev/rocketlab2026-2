@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 
 import { focusRingClass } from '../styles/interactive'
 import type { MovieListItem } from '../types/movie'
+import { movieTitle } from '../utils/movieTitle'
 
 interface MovieCardProps {
   movie: MovieListItem
@@ -43,7 +44,7 @@ function MovieCard({ movie, frameNumber, entranceDelayMs }: MovieCardProps) {
             )}
             <img
               src={movie.url_poster ?? undefined}
-              alt={movie.titulo}
+              alt={movieTitle(movie.titulo)}
               loading="lazy"
               onLoad={() => setPosterLoaded(true)}
               onError={() => setPosterError(true)}
@@ -67,7 +68,7 @@ function MovieCard({ movie, frameNumber, entranceDelayMs }: MovieCardProps) {
         )}
       </div>
       <div className="flex flex-1 flex-col gap-1 p-3">
-        <h3 className="line-clamp-2 text-sm leading-snug font-medium text-ink">{movie.titulo}</h3>
+        <h3 className="line-clamp-2 text-sm leading-snug font-medium text-ink">{movieTitle(movie.titulo)}</h3>
         <div className="mt-auto flex items-center justify-between text-xs text-ink-muted">
           <span className="tabular-nums">{movie.ano_lancamento ?? '—'}</span>
           {movie.qtd_avaliacoes === 0 && <span>Sem avaliações</span>}
