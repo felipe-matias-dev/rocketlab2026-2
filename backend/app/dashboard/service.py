@@ -19,14 +19,15 @@ from app.dashboard.schemas import (
     RankedMovieByRevenue,
     RatingBucket,
 )
+from app.movies.cache import movie_cache
 from app.movies.models import (
     DimGenre,
     DimMovie,
+    DimReview,
     FactMoviePerformance,
     MovieReview,
     bridge_movie_genre,
 )
-from app.movies.service import reviews_aggregate
 
 MIN_REVIEWS_FOR_TOP_RATED = 5
 TOP_N = 10
@@ -40,12 +41,11 @@ async def _get_kpis(session: AsyncSession) -> DashboardKpis:
         )
     ).one()
 
-    reviews_agg = reviews_aggregate()
     most_reviewed = (
         await session.execute(
-            select(DimMovie.titulo, reviews_agg.c.qtd_avaliacoes)
-            .join(reviews_agg, reviews_agg.c.sk_movie_id == DimMovie.sk_movie_id)
-            .order_by(reviews_agg.c.qtd_avaliacoes.desc())
+            select(DimMovie.titulo, DimReview.qtd_avaliacoes_usuarios)
+            .join(DimReview, DimReview.sk_movie_id == DimMovie.sk_movie_id)
+            .order_by(DimReview.qtd_avaliacoes_usuarios.desc())
             .limit(1)
         )
     ).first()
@@ -75,22 +75,19 @@ async def _get_rating_distribution(session: AsyncSession) -> list[RatingBucket]:
 async def _get_avg_rating_by_genre(session: AsyncSession) -> list[GenreRatingBreakdown]:
     """Nota média dos filmes de cada gênero. Todos os 19 gêneros aparecem, mesmo sem review."""
 
-    reviews_agg = reviews_aggregate()
     rows = (
         await session.execute(
             select(
                 DimGenre.sk_genre_id,
                 DimGenre.nome_genero,
-                func.avg(reviews_agg.c.nota_media),
-                func.coalesce(func.sum(reviews_agg.c.qtd_avaliacoes), 0),
+                func.avg(DimReview.nota_media_usuarios),
+                func.coalesce(func.sum(DimReview.qtd_avaliacoes_usuarios), 0),
             )
             .select_from(DimGenre)
             .outerjoin(
                 bridge_movie_genre, bridge_movie_genre.c.sk_genre_id == DimGenre.sk_genre_id
             )
-            .outerjoin(
-                reviews_agg, reviews_agg.c.sk_movie_id == bridge_movie_genre.c.sk_movie_id
-            )
+            .outerjoin(DimReview, DimReview.sk_movie_id == bridge_movie_genre.c.sk_movie_id)
             .group_by(DimGenre.sk_genre_id, DimGenre.nome_genero)
             .order_by(DimGenre.nome_genero)
         )
@@ -129,18 +126,17 @@ async def _get_movies_by_year(session: AsyncSession) -> list[MoviesByYear]:
 async def _get_top_rated_movies(session: AsyncSession) -> list[RankedMovie]:
     """Top 10 por nota média, exigindo um piso de reviews para não deixar 1 nota dominar."""
 
-    reviews_agg = reviews_aggregate()
     rows = (
         await session.execute(
             select(
                 DimMovie.sk_movie_id,
                 DimMovie.titulo,
-                reviews_agg.c.nota_media,
-                reviews_agg.c.qtd_avaliacoes,
+                DimReview.nota_media_usuarios,
+                DimReview.qtd_avaliacoes_usuarios,
             )
-            .join(reviews_agg, reviews_agg.c.sk_movie_id == DimMovie.sk_movie_id)
-            .where(reviews_agg.c.qtd_avaliacoes >= MIN_REVIEWS_FOR_TOP_RATED)
-            .order_by(reviews_agg.c.nota_media.desc())
+            .join(DimReview, DimReview.sk_movie_id == DimMovie.sk_movie_id)
+            .where(DimReview.qtd_avaliacoes_usuarios >= MIN_REVIEWS_FOR_TOP_RATED)
+            .order_by(DimReview.nota_media_usuarios.desc())
             .limit(TOP_N)
         )
     ).all()
@@ -151,17 +147,16 @@ async def _get_top_rated_movies(session: AsyncSession) -> list[RankedMovie]:
 
 
 async def _get_most_reviewed_movies(session: AsyncSession) -> list[RankedMovie]:
-    reviews_agg = reviews_aggregate()
     rows = (
         await session.execute(
             select(
                 DimMovie.sk_movie_id,
                 DimMovie.titulo,
-                reviews_agg.c.nota_media,
-                reviews_agg.c.qtd_avaliacoes,
+                DimReview.nota_media_usuarios,
+                DimReview.qtd_avaliacoes_usuarios,
             )
-            .join(reviews_agg, reviews_agg.c.sk_movie_id == DimMovie.sk_movie_id)
-            .order_by(reviews_agg.c.qtd_avaliacoes.desc())
+            .join(DimReview, DimReview.sk_movie_id == DimMovie.sk_movie_id)
+            .order_by(DimReview.qtd_avaliacoes_usuarios.desc())
             .limit(TOP_N)
         )
     ).all()
@@ -215,7 +210,13 @@ async def _get_financials_by_decade(session: AsyncSession) -> list[FinancialsByD
 
 
 async def get_dashboard_summary(session: AsyncSession) -> DashboardSummary:
-    return DashboardSummary(
+    cache_key = ("dashboard",)
+    cached = movie_cache.get(cache_key)
+    if cached is not None:
+        return cached
+    generation = movie_cache.generation
+
+    summary = DashboardSummary(
         kpis=await _get_kpis(session),
         rating_distribution=await _get_rating_distribution(session),
         avg_rating_by_genre=await _get_avg_rating_by_genre(session),
@@ -225,3 +226,5 @@ async def get_dashboard_summary(session: AsyncSession) -> DashboardSummary:
         top_movies_by_revenue=await _get_top_movies_by_revenue(session),
         financials_by_decade=await _get_financials_by_decade(session),
     )
+    movie_cache.put_if_current(cache_key, summary, generation)
+    return summary

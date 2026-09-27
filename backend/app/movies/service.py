@@ -8,18 +8,30 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.movies.cache import movie_cache
 from app.movies.models import (
     DimGenre,
     DimMovie,
     DimPerson,
+    DimReview,
     FactMoviePerformance,
     MovieReview,
     bridge_movie_person,
     generate_surrogate_key,
 )
-from app.movies.schemas import MovieCreate, MovieUpdate, ReviewCreate
-
-MovieWithRating = tuple[DimMovie, float | None, int, float | None]
+from app.movies.schemas import (
+    CompanyRead,
+    GenreRead,
+    MovieCreate,
+    MovieDetail,
+    MovieListItem,
+    MovieUpdate,
+    Paginated,
+    PerformanceRead,
+    PersonRead,
+    ReviewCreate,
+    ReviewRead,
+)
 
 MovieSort = Literal["title", "popularity", "rating", "recent", "reviews_count"]
 SortOrder = Literal["asc", "desc"]
@@ -31,18 +43,6 @@ class InvalidGenreError(ValueError):
     def __init__(self, genre_id: str) -> None:
         super().__init__(f"Gênero não encontrado: {genre_id}")
         self.genre_id = genre_id
-
-
-def reviews_aggregate():
-    return (
-        select(
-            MovieReview.sk_movie_id,
-            func.avg(MovieReview.nota).label("nota_media"),
-            func.count(MovieReview.sk_movie_review_id).label("qtd_avaliacoes"),
-        )
-        .group_by(MovieReview.sk_movie_id)
-        .subquery()
-    )
 
 
 async def list_movies(
@@ -59,15 +59,33 @@ async def list_movies(
     rating_max: float | None = None,
     sort: MovieSort = "title",
     order: SortOrder = "asc",
-) -> tuple[list[MovieWithRating], int]:
-    """Retorna uma página de filmes com nota média/contagem calculadas ao vivo.
+) -> Paginated[MovieListItem]:
+    """Retorna uma página de filmes com nota média/contagem lidas de dim_reviews (resumo
+    ao vivo, mantido por create_review), em vez de recalculadas via GROUP BY a cada chamada.
 
     Filtros são combinados com AND entre si; dentro de `genre_ids`, um filme que
     tenha qualquer um dos gêneros informados já entra (OR). `rating_min`/`rating_max`
     filtram pela nota média das avaliações de usuários (não pela nota do TMDB).
     """
 
-    reviews_agg = reviews_aggregate()
+    cache_key = (
+        "list",
+        page,
+        page_size,
+        q,
+        tuple(sorted(genre_ids)) if genre_ids else None,
+        director,
+        year_from,
+        year_to,
+        rating_min,
+        rating_max,
+        sort,
+        order,
+    )
+    cached = movie_cache.get(cache_key)
+    if cached is not None:
+        return cached
+    generation = movie_cache.generation
 
     filters = []
     if q:
@@ -94,16 +112,16 @@ async def list_movies(
     if year_to is not None:
         filters.append(DimMovie.ano_lancamento <= year_to)
     if rating_min is not None:
-        filters.append(reviews_agg.c.nota_media >= rating_min)
+        filters.append(DimReview.nota_media_usuarios >= rating_min)
     if rating_max is not None:
-        filters.append(reviews_agg.c.nota_media <= rating_max)
+        filters.append(DimReview.nota_media_usuarios <= rating_max)
 
     sort_columns = {
         "title": DimMovie.titulo,
         "popularity": FactMoviePerformance.popularidade,
-        "rating": reviews_agg.c.nota_media,
+        "rating": DimReview.nota_media_usuarios,
         "recent": DimMovie.criado_em,
-        "reviews_count": func.coalesce(reviews_agg.c.qtd_avaliacoes, 0),
+        "reviews_count": func.coalesce(DimReview.qtd_avaliacoes_usuarios, 0),
     }
     order_column = sort_columns[sort]
     order_clause = order_column.desc() if order == "desc" else order_column.asc()
@@ -114,11 +132,11 @@ async def list_movies(
     query = (
         select(
             DimMovie,
-            reviews_agg.c.nota_media,
-            func.coalesce(reviews_agg.c.qtd_avaliacoes, 0),
+            DimReview.nota_media_usuarios,
+            func.coalesce(DimReview.qtd_avaliacoes_usuarios, 0),
             FactMoviePerformance.popularidade,
         )
-        .outerjoin(reviews_agg, reviews_agg.c.sk_movie_id == DimMovie.sk_movie_id)
+        .outerjoin(DimReview, DimReview.sk_movie_id == DimMovie.sk_movie_id)
         .outerjoin(
             FactMoviePerformance, FactMoviePerformance.sk_movie_id == DimMovie.sk_movie_id
         )
@@ -129,7 +147,7 @@ async def list_movies(
     count_query = (
         select(func.count())
         .select_from(DimMovie)
-        .outerjoin(reviews_agg, reviews_agg.c.sk_movie_id == DimMovie.sk_movie_id)
+        .outerjoin(DimReview, DimReview.sk_movie_id == DimMovie.sk_movie_id)
     )
     for movie_filter in filters:
         query = query.where(movie_filter)
@@ -137,11 +155,56 @@ async def list_movies(
 
     total = await session.scalar(count_query)
     rows = (await session.execute(query)).all()
-    return list(rows), total or 0
+    items = [
+        MovieListItem(
+            sk_movie_id=movie.sk_movie_id,
+            titulo=movie.titulo,
+            ano_lancamento=movie.ano_lancamento,
+            url_poster=movie.url_poster,
+            nota_media=nota_media,
+            qtd_avaliacoes=qtd_avaliacoes,
+            popularidade=popularidade,
+        )
+        for movie, nota_media, qtd_avaliacoes, popularidade in rows
+    ]
+    result = Paginated(items=items, total=total or 0, page=page, page_size=page_size)
+    movie_cache.put_if_current(cache_key, result, generation)
+    return result
 
 
-async def get_movie_detail(session: AsyncSession, sk_movie_id: str) -> DimMovie | None:
-    """Busca um filme com gêneros, pessoas e avaliações já carregados."""
+def _compose_movie_detail(movie: DimMovie) -> MovieDetail:
+    summary = movie.reviews_summary
+    return MovieDetail(
+        sk_movie_id=movie.sk_movie_id,
+        id_filme=movie.id_filme,
+        titulo=movie.titulo,
+        data_lancamento=movie.data_lancamento,
+        ano_lancamento=movie.ano_lancamento,
+        duracao_minutos=movie.duracao_minutos,
+        status_filme=movie.status_filme,
+        sinopse=movie.sinopse,
+        url_poster=movie.url_poster,
+        url_backdrop=movie.url_backdrop,
+        genres=[GenreRead.model_validate(genre) for genre in movie.genres],
+        people=[PersonRead.model_validate(person) for person in movie.people],
+        companies=[CompanyRead.model_validate(company) for company in movie.companies],
+        reviews=[ReviewRead.model_validate(review) for review in movie.reviews],
+        nota_media=summary.nota_media_usuarios if summary else None,
+        qtd_avaliacoes=summary.qtd_avaliacoes_usuarios if summary else 0,
+        performance=(
+            PerformanceRead.model_validate(movie.performance) if movie.performance else None
+        ),
+    )
+
+
+async def get_movie_detail(session: AsyncSession, sk_movie_id: str) -> MovieDetail | None:
+    """Busca um filme com gêneros, pessoas, avaliações e resumo já carregados, cacheado."""
+
+    cache_key = ("detail", sk_movie_id)
+    cached = movie_cache.get(cache_key)
+    if cached is not None:
+        return cached
+    generation = movie_cache.generation
 
     query = (
         select(DimMovie)
@@ -150,11 +213,25 @@ async def get_movie_detail(session: AsyncSession, sk_movie_id: str) -> DimMovie 
             selectinload(DimMovie.people),
             selectinload(DimMovie.companies),
             selectinload(DimMovie.reviews),
+            selectinload(DimMovie.reviews_summary),
             selectinload(DimMovie.performance),
         )
         .where(DimMovie.sk_movie_id == sk_movie_id)
     )
-    return await session.scalar(query)
+    movie = await session.scalar(query)
+    if movie is None:
+        return None
+
+    detail = _compose_movie_detail(movie)
+    movie_cache.put_if_current(cache_key, detail, generation)
+    return detail
+
+
+async def _get_movie_detail_or_raise(session: AsyncSession, sk_movie_id: str) -> MovieDetail:
+    detail = await get_movie_detail(session, sk_movie_id)
+    if detail is None:  # pragma: no cover - não deve acontecer logo após commit
+        raise RuntimeError(f"Filme {sk_movie_id} não encontrado após commit")
+    return detail
 
 
 async def list_genres(session: AsyncSession) -> list[DimGenre]:
@@ -208,7 +285,7 @@ async def _get_or_create_director(session: AsyncSession, nome: str) -> DimPerson
     return director
 
 
-async def create_movie(session: AsyncSession, data: MovieCreate) -> DimMovie:
+async def create_movie(session: AsyncSession, data: MovieCreate) -> MovieDetail:
     """Cria um filme novo; genre_ids devem existir, diretor é get-or-create."""
 
     genres = await _get_genres_by_ids(session, data.genre_ids) if data.genre_ids else []
@@ -229,13 +306,15 @@ async def create_movie(session: AsyncSession, data: MovieCreate) -> DimMovie:
     )
     session.add(movie)
     await session.commit()
-    return movie
+    movie_cache.invalidate()
+    return await _get_movie_detail_or_raise(session, movie.sk_movie_id)
 
 
 async def create_review(
     session: AsyncSession, sk_movie_id: str, data: ReviewCreate
 ) -> MovieReview | None:
-    """Cria uma avaliação; retorna None se o filme não existir."""
+    """Cria uma avaliação e atualiza o resumo ao vivo (dim_reviews) do filme;
+    retorna None se o filme não existir."""
 
     movie_id = await session.scalar(
         select(DimMovie.sk_movie_id).where(DimMovie.sk_movie_id == sk_movie_id)
@@ -247,25 +326,50 @@ async def create_review(
         sk_movie_id=sk_movie_id, nome=data.nome, nota=data.nota, comentario=data.comentario
     )
     session.add(review)
+    await session.flush()
+
+    qtd_avaliacoes, nota_media = (
+        await session.execute(
+            select(func.count(), func.avg(MovieReview.nota)).where(
+                MovieReview.sk_movie_id == sk_movie_id
+            )
+        )
+    ).one()
+
+    summary = await session.scalar(select(DimReview).where(DimReview.sk_movie_id == sk_movie_id))
+    if summary is None:
+        session.add(
+            DimReview(
+                sk_movie_id=sk_movie_id,
+                qtd_avaliacoes_usuarios=qtd_avaliacoes,
+                nota_media_usuarios=nota_media,
+            )
+        )
+    else:
+        summary.qtd_avaliacoes_usuarios = qtd_avaliacoes
+        summary.nota_media_usuarios = nota_media
+
     await session.commit()
     await session.refresh(review)  # popula created_at (server_default)
+    movie_cache.invalidate()
     return review
 
 
 async def delete_movie(session: AsyncSession, sk_movie_id: str) -> bool:
-    """Remove um filme; ON DELETE CASCADE cuida de reviews/bridges/fato."""
+    """Remove um filme; ON DELETE CASCADE cuida de reviews/bridges/fato/resumo."""
 
     movie = await session.get(DimMovie, sk_movie_id)
     if movie is None:
         return False
     await session.delete(movie)
     await session.commit()
+    movie_cache.invalidate()
     return True
 
 
 async def update_movie(
     session: AsyncSession, sk_movie_id: str, data: MovieUpdate
-) -> DimMovie | None:
+) -> MovieDetail | None:
     """Substitui os campos editáveis de um filme existente.
 
     Gêneros são totalmente substituídos pelos novos `genre_ids`. Já o diretor
@@ -299,4 +403,5 @@ async def update_movie(
         movie.people.append(await _get_or_create_director(session, data.diretor))
 
     await session.commit()
-    return movie
+    movie_cache.invalidate()
+    return await _get_movie_detail_or_raise(session, sk_movie_id)
