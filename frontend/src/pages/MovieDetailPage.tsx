@@ -154,6 +154,21 @@ function MovieDetailPage() {
     showToast('Avaliação enviada com sucesso.')
   }
 
+  function handleReviewDeleted(review: Review) {
+    setMovie((current) => {
+      if (!current) return current
+      const reviews = current.reviews.filter(
+        (item) => item.sk_movie_review_id !== review.sk_movie_review_id,
+      )
+      const nota_media =
+        reviews.length > 0
+          ? reviews.reduce((sum, item) => sum + item.nota, 0) / reviews.length
+          : null
+      return { ...current, reviews, nota_media, qtd_avaliacoes: reviews.length }
+    })
+    showToast('Avaliação removida com sucesso.')
+  }
+
   async function handleDelete() {
     if (!movieId) return
     if (!window.confirm('Remover este filme? Essa ação não pode ser desfeita.')) return
@@ -291,7 +306,11 @@ function MovieDetailPage() {
           <div>
             <h2 className="text-lg font-semibold text-ink">Avaliações</h2>
             <div className="mt-4">
-              <ReviewList reviews={movie.reviews} />
+              <ReviewList
+                movieId={movie.sk_movie_id}
+                reviews={movie.reviews}
+                onDeleted={handleReviewDeleted}
+              />
             </div>
           </div>
           <div>

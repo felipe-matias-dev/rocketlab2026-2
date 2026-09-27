@@ -18,3 +18,14 @@ async def create_review(
     if review is None:
         raise HTTPException(status_code=404, detail="Filme não encontrado")
     return ReviewRead.model_validate(review)
+
+
+@router.delete(
+    "/{sk_movie_id}/reviews/{sk_movie_review_id}", status_code=status.HTTP_204_NO_CONTENT
+)
+async def delete_review(
+    sk_movie_id: str, sk_movie_review_id: str, db: AsyncSession = Depends(get_db)
+) -> None:
+    deleted = await service.delete_review(db, sk_movie_id, sk_movie_review_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Avaliação não encontrada")

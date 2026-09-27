@@ -34,6 +34,15 @@ vi.mock('../components/ReviewForm', () => ({
   ),
 }))
 
+// ReviewList's own behavior (confirmation, the delete call, per-item pending/error state) is
+// covered by ReviewList.test.tsx; here we only need to trigger its onDeleted callback to check
+// how this page reacts to a removed review.
+vi.mock('../components/ReviewList', () => ({
+  default: ({ reviews, onDeleted }: { reviews: Review[]; onDeleted: (review: Review) => void }) => (
+    <button onClick={() => onDeleted(reviews[0])}>Fake delete review</button>
+  ),
+}))
+
 const mockedGetMovie = vi.mocked(getMovie)
 const mockedDeleteMovie = vi.mocked(deleteMovie)
 
@@ -293,6 +302,50 @@ describe('MovieDetailPage', () => {
 
       expect(await screen.findByText('Avaliação enviada com sucesso.')).toBeInTheDocument()
       expect(screen.getByText('8.0 (2)')).toBeInTheDocument()
+    })
+  })
+
+  describe('deleting a review', () => {
+    it('recomputes the average rating and shows a success toast', async () => {
+      mockedGetMovie.mockResolvedValue(
+        baseMovie({
+          reviews: [
+            { sk_movie_review_id: 'r1', nome: 'Ana', nota: 6, comentario: 'Ok', created_at: '2026-01-01T00:00:00Z' },
+            { sk_movie_review_id: 'r2', nome: 'Bruno', nota: 10, comentario: 'Ótimo', created_at: '2026-01-02T00:00:00Z' },
+          ],
+          nota_media: 8,
+          qtd_avaliacoes: 2,
+        }),
+      )
+
+      renderPage()
+      await screen.findByRole('heading', { name: 'Duna' })
+      expect(screen.getByText('8.0 (2)')).toBeInTheDocument()
+
+      fireEvent.click(screen.getByRole('button', { name: 'Fake delete review' }))
+
+      expect(await screen.findByText('Avaliação removida com sucesso.')).toBeInTheDocument()
+      expect(screen.getByText('10.0 (1)')).toBeInTheDocument()
+    })
+
+    it('clears the average when the last review is removed', async () => {
+      mockedGetMovie.mockResolvedValue(
+        baseMovie({
+          reviews: [
+            { sk_movie_review_id: 'r1', nome: 'Ana', nota: 6, comentario: 'Ok', created_at: '2026-01-01T00:00:00Z' },
+          ],
+          nota_media: 6,
+          qtd_avaliacoes: 1,
+        }),
+      )
+
+      renderPage()
+      await screen.findByRole('heading', { name: 'Duna' })
+
+      fireEvent.click(screen.getByRole('button', { name: 'Fake delete review' }))
+
+      expect(await screen.findByText('Avaliação removida com sucesso.')).toBeInTheDocument()
+      expect(screen.getByText('Sem avaliações')).toBeInTheDocument()
     })
   })
 

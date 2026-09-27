@@ -425,6 +425,44 @@ async def create_review(
     return review
 
 
+async def delete_review(session: AsyncSession, sk_movie_id: str, sk_movie_review_id: str) -> bool:
+    """Exclui uma avaliação e recalcula o resumo ao vivo (dim_reviews) do filme.
+
+    Recalcula via COUNT/AVG sobre as avaliações restantes em vez de uma fórmula
+    inversa incremental: `func.avg` de um conjunto vazio já retorna NULL, então a
+    média some sozinha quando a última avaliação é removida, sem caso especial.
+    """
+
+    review = await session.scalar(
+        select(MovieReview).where(
+            MovieReview.sk_movie_review_id == sk_movie_review_id,
+            MovieReview.sk_movie_id == sk_movie_id,
+        )
+    )
+    if review is None:
+        return False
+
+    await session.delete(review)
+    await session.flush()
+
+    qtd_avaliacoes, nota_media = (
+        await session.execute(
+            select(func.count(), func.avg(MovieReview.nota)).where(
+                MovieReview.sk_movie_id == sk_movie_id
+            )
+        )
+    ).one()
+
+    summary = await session.scalar(select(DimReview).where(DimReview.sk_movie_id == sk_movie_id))
+    if summary is not None:
+        summary.qtd_avaliacoes_usuarios = qtd_avaliacoes
+        summary.nota_media_usuarios = nota_media
+
+    await session.commit()
+    movie_cache.invalidate()
+    return True
+
+
 async def delete_movie(session: AsyncSession, sk_movie_id: str) -> bool:
     """Remove um filme; ON DELETE CASCADE cuida de reviews/bridges/fato/resumo."""
 

@@ -40,3 +40,7 @@ export function deleteMovie(skMovieId: string): Promise<void> {
 export function createReview(skMovieId: string, input: ReviewCreateInput): Promise<Review> {
   return apiClient.post(`/movies/${skMovieId}/reviews`, input)
 }
+
+export function deleteReview(skMovieId: string, skMovieReviewId: string): Promise<void> {
+  return apiClient.delete(`/movies/${skMovieId}/reviews/${skMovieReviewId}`)
+}
