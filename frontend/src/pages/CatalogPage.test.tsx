@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, useLocation } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { ApiError } from '../api/client'
@@ -40,9 +40,15 @@ function movie(overrides: Partial<MovieListItem> = {}): MovieListItem {
   }
 }
 
-function renderCatalog() {
+function LocationSearch() {
+  const location = useLocation()
+  return <div data-testid="location-search">{location.search}</div>
+}
+
+function renderCatalog(initialEntries: string[] = ['/']) {
   return render(
-    <MemoryRouter>
+    <MemoryRouter initialEntries={initialEntries}>
+      <LocationSearch />
       <CatalogPage />
     </MemoryRouter>,
   )
@@ -149,11 +155,6 @@ describe('CatalogPage', () => {
     expect(mockedListMovies.mock.calls.at(-1)?.[0]).toMatchObject({ page: 2 })
   })
 
-  // Regression note: CatalogPage also resets `page` to 1 from an unrelated debounce effect that
-  // fires ~400ms after every mount (harmless in the real app, since page is already 1 then). If
-  // this assertion used `waitFor`/awaited anything slow first, that incidental reset could fire
-  // and mask a real regression in `changeSort` — so it checks the call synchronously, right after
-  // the triggering event, before that timer has a chance to run.
   it('resets to page 1 when the sort field changes', async () => {
     mockedListMovies.mockResolvedValue({ items: [movie()], total: 50, page: 1, page_size: 20 })
     renderCatalog()
@@ -177,9 +178,6 @@ describe('CatalogPage', () => {
     expect(toggle).toHaveAttribute('aria-expanded', 'true')
   })
 
-  // Same timing note as the sort-reset test above: genres are already loaded by the time the
-  // initial results render, so every step here runs as one synchronous burst of fireEvents with
-  // no intervening `await`, keeping the incidental mount-debounce timer out of the picture.
   it('refetches with the selected genre and resets to page 1', async () => {
     mockedListMovies.mockResolvedValue({ items: [movie()], total: 50, page: 1, page_size: 20 })
     renderCatalog()
@@ -212,5 +210,89 @@ describe('CatalogPage', () => {
     await waitFor(() =>
       expect(mockedListMovies).toHaveBeenCalledWith(expect.objectContaining({ genre_ids: undefined, page: 1 })),
     )
+  })
+
+  describe('URL sync', () => {
+    it('restores search, sort, order and page from the URL on mount', async () => {
+      mockedListMovies.mockResolvedValue({ items: [movie()], total: 50, page: 2, page_size: 20 })
+
+      renderCatalog(['/?q=duna&sort=rating&order=asc&page=2'])
+
+      await waitFor(() =>
+        expect(mockedListMovies).toHaveBeenCalledWith(
+          expect.objectContaining({ q: 'duna', sort: 'rating', order: 'asc', page: 2 }),
+        ),
+      )
+      expect(screen.getByLabelText('Buscar por título')).toHaveValue('duna')
+      expect(screen.getByLabelText('Ordenar por')).toHaveValue('rating')
+    })
+
+    // Regression test: the debounce effect that commits typed filters into the URL used to run
+    // unconditionally ~400ms after every mount (a documented, previously-harmless quirk since
+    // page was always 1 in tests written before URL sync existed) — which reset `page` back to 1
+    // even when nothing had actually changed, silently undoing a deep link to page 2+.
+    it('keeps a deep-linked page after the debounce window passes without any typing', async () => {
+      mockedListMovies.mockResolvedValue({ items: [movie()], total: 50, page: 2, page_size: 20 })
+      renderCatalog(['/?page=2'])
+      await waitFor(() =>
+        expect(mockedListMovies).toHaveBeenCalledWith(expect.objectContaining({ page: 2 })),
+      )
+      mockedListMovies.mockClear()
+
+      await new Promise((resolve) => setTimeout(resolve, 500))
+
+      expect(mockedListMovies).not.toHaveBeenCalled()
+      expect(screen.getByTestId('location-search')).toHaveTextContent('page=2')
+    })
+
+    it('ignores an invalid sort value from the URL and falls back to the default', async () => {
+      renderCatalog(['/?sort=nao-existe'])
+
+      await waitFor(() =>
+        expect(mockedListMovies).toHaveBeenCalledWith(expect.objectContaining({ sort: 'title' })),
+      )
+    })
+
+    it('writes the debounced search into the URL, so a refresh would keep it', async () => {
+      renderCatalog()
+      await screen.findByText('Nenhum filme encontrado.')
+
+      fireEvent.change(screen.getByLabelText('Buscar por título'), { target: { value: 'duna' } })
+
+      await waitFor(() => expect(screen.getByTestId('location-search')).toHaveTextContent('q=duna'))
+    })
+
+    it('writes the selected page into the URL', async () => {
+      mockedListMovies.mockResolvedValue({ items: [movie()], total: 50, page: 1, page_size: 20 })
+      renderCatalog()
+      await screen.findByText('50 filmes encontrados')
+
+      fireEvent.click(screen.getByRole('button', { name: '2' }))
+
+      expect(screen.getByTestId('location-search')).toHaveTextContent('page=2')
+    })
+
+    it('omits page=1 from the URL, keeping links to the first page short', async () => {
+      mockedListMovies.mockResolvedValue({ items: [movie()], total: 50, page: 1, page_size: 20 })
+      renderCatalog(['/?page=2'])
+      await screen.findByText('50 filmes encontrados')
+
+      fireEvent.click(screen.getByRole('button', { name: '1' }))
+
+      expect(screen.getByTestId('location-search')).not.toHaveTextContent('page=1')
+    })
+
+    it('clears the URL back to the bare path when filters are cleared', async () => {
+      mockedListMovies.mockResolvedValue({ items: [movie()], total: 50, page: 1, page_size: 20 })
+      renderCatalog(['/?q=duna'])
+      await waitFor(() =>
+        expect(mockedListMovies).toHaveBeenCalledWith(expect.objectContaining({ q: 'duna' })),
+      )
+
+      fireEvent.click(screen.getByRole('button', { name: 'Filtros' }))
+      fireEvent.click(screen.getByRole('button', { name: 'Limpar filtros' }))
+
+      await waitFor(() => expect(screen.getByTestId('location-search').textContent).toBe(''))
+    })
   })
 })

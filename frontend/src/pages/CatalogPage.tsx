@@ -1,6 +1,6 @@
 import { Funnel } from '@phosphor-icons/react'
 import { useEffect, useRef, useState } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 
 import { listMovies } from '../api/movies'
 import { listGenres } from '../api/genres'
@@ -19,6 +19,8 @@ import type { Genre, MovieListItem, MovieSort, SortOrder } from '../types/movie'
 const PAGE_SIZE = 20
 const SEARCH_DEBOUNCE_MS = 400
 const FILTERS_TRANSITION_MS = 300
+const SORT_VALUES: readonly MovieSort[] = ['title', 'popularity', 'rating', 'recent', 'reviews_count']
+const ORDER_VALUES: readonly SortOrder[] = ['asc', 'desc']
 
 interface TextFilters {
   q: string
@@ -41,6 +43,61 @@ interface CatalogData {
   movies: MovieListItem[]
   total: number
   animateEntrance: boolean
+}
+
+// O estado do catálogo (busca, filtros, ordenação e página) vive na URL, não em useState: F5,
+// o botão "voltar" do navegador e um link colado em outra aba reproduzem exatamente a mesma
+// vista. As funções abaixo são as únicas que leem/escrevem essas chaves — todo o resto do
+// componente trata `searchParams` como a fonte da verdade.
+function readTextFilters(params: URLSearchParams): TextFilters {
+  return {
+    q: params.get('q') ?? '',
+    director: params.get('director') ?? '',
+    yearFrom: params.get('year_from') ?? '',
+    yearTo: params.get('year_to') ?? '',
+    ratingMin: params.get('rating_min') ?? '',
+  }
+}
+
+function readGenreIds(params: URLSearchParams): string[] {
+  return params.getAll('genre')
+}
+
+function readSort(params: URLSearchParams): MovieSort {
+  const value = params.get('sort')
+  return (SORT_VALUES as readonly string[]).includes(value ?? '') ? (value as MovieSort) : 'title'
+}
+
+function readOrder(params: URLSearchParams): SortOrder {
+  const value = params.get('order')
+  return (ORDER_VALUES as readonly string[]).includes(value ?? '') ? (value as SortOrder) : 'desc'
+}
+
+function readPage(params: URLSearchParams): number {
+  return Math.max(1, Number(params.get('page')) || 1)
+}
+
+// Substitui os cinco campos de texto de uma vez (o debounce de digitação e o "confirmar na
+// hora" de diretor/chips reaproveitam a mesma função) e, por padrão, tira `page` da URL — toda
+// mudança de filtro volta pra primeira página.
+function withTextFilters(
+  base: URLSearchParams,
+  filters: TextFilters,
+  { resetPage = true }: { resetPage?: boolean } = {},
+): URLSearchParams {
+  const next = new URLSearchParams(base)
+  next.delete('q')
+  next.delete('director')
+  next.delete('year_from')
+  next.delete('year_to')
+  next.delete('rating_min')
+  if (filters.q) next.set('q', filters.q)
+  if (filters.director) next.set('director', filters.director)
+  if (filters.yearFrom) next.set('year_from', filters.yearFrom)
+  if (filters.yearTo) next.set('year_to', filters.yearTo)
+  if (filters.ratingMin) next.set('rating_min', filters.ratingMin)
+  if (resetPage) next.delete('page')
+  return next
 }
 
 function CatalogGrid({ children }: { children: React.ReactNode }) {
@@ -69,47 +126,30 @@ function RegistrationMark({ className }: { className: string }) {
   )
 }
 
-function filterKey(
-  page: number,
-  genreIds: string[],
-  filters: TextFilters,
-  sort: MovieSort,
-  order: SortOrder,
-): string {
-  return JSON.stringify({ page, genreIds, filters, sort, order })
-}
-
 function CatalogPage() {
-  const [textInput, setTextInput] = useState<TextFilters>(EMPTY_TEXT_FILTERS)
-  const [textFilters, setTextFilters] = useState<TextFilters>(EMPTY_TEXT_FILTERS)
-  const [genreIds, setGenreIds] = useState<string[]>([])
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  const textFilters = readTextFilters(searchParams)
+  const genreIds = readGenreIds(searchParams)
+  const sort = readSort(searchParams)
+  const order = readOrder(searchParams)
+  const page = readPage(searchParams)
+
+  // Buffer local só pra digitação: existe pra não escrever (e refazer a busca) em cada tecla.
+  // Ressincroniza sempre que o valor confirmado na URL mudar por qualquer outro caminho —
+  // debounce dele mesmo (vira um no-op), voltar/avançar no navegador, ou "Limpar filtros".
+  const [textInput, setTextInput] = useState<TextFilters>(textFilters)
+  useEffect(() => {
+    setTextInput(textFilters)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [textFilters.q, textFilters.director, textFilters.yearFrom, textFilters.yearTo, textFilters.ratingMin])
+
   const [genres, setGenres] = useState<Genre[] | null>(null)
-  const [sort, setSort] = useState<MovieSort>('title')
-  const [order, setOrder] = useState<SortOrder>('desc')
-  const [page, setPage] = useState(1)
   const [data, setData] = useState<CatalogData | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [filtersExpanded, setFiltersExpanded] = useState(false)
   const lastNonPageKeyRef = useRef<string | null>(null)
-  const location = useLocation()
-  const [resetKey, setResetKey] = useState(location.key)
-
-  // O logo em Layout.tsx é um Link to="/", que é a própria rota do catálogo — clicar nele
-  // enquanto já se está aqui não remonta o componente (mesma rota), então o estado local de
-  // busca/filtro/ordenação não reseta sozinho. `location.key` muda a cada navegação, mesmo pra
-  // uma URL idêntica; comparamos com o último key visto e ajustamos o estado direto no render
-  // (padrão recomendado pelo React pra isso, em vez de um useEffect com setState em cascata).
-  if (location.key !== resetKey) {
-    setResetKey(location.key)
-    setTextInput(EMPTY_TEXT_FILTERS)
-    setTextFilters(EMPTY_TEXT_FILTERS)
-    setGenreIds([])
-    setSort('title')
-    setOrder('desc')
-    setPage(1)
-    setFiltersOpen(false)
-  }
 
   useEffect(() => {
     listGenres()
@@ -136,19 +176,31 @@ function CatalogPage() {
     })
   }
 
-  // Debounce: só promove textInput -> textFilters (o que de fato dispara a busca)
-  // depois que o usuário para de digitar, e volta pra página 1.
+  // Debounce: só grava textInput na URL (o que de fato dispara a busca) depois que o usuário
+  // para de digitar/arrastar um slider, e volta pra página 1. O guard contra "sem mudança"
+  // evita resetar `page` num link direto pra página 2+: esse efeito roda uma vez a cada mount
+  // (dependência `[textInput]` também dispara na primeira renderização), e sem o guard ele
+  // reescreveria a URL — e tiraria o `page` dela — mesmo sem o usuário ter digitado nada.
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      setTextFilters(textInput)
-      setPage(1)
+      const unchanged =
+        textInput.q === textFilters.q &&
+        textInput.director === textFilters.director &&
+        textInput.yearFrom === textFilters.yearFrom &&
+        textInput.yearTo === textFilters.yearTo &&
+        textInput.ratingMin === textFilters.ratingMin
+      if (unchanged) return
+      setSearchParams(withTextFilters(searchParams, textInput), { replace: true })
     }, SEARCH_DEBOUNCE_MS)
     return () => clearTimeout(timeoutId)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [textInput])
 
   useEffect(() => {
     let cancelled = false
-    const nonPageKey = JSON.stringify({ genreIds, textFilters, sort, order })
+    const nonPageParams = new URLSearchParams(searchParams)
+    nonPageParams.delete('page')
+    const nonPageKey = nonPageParams.toString()
 
     listMovies({
       page,
@@ -170,7 +222,7 @@ function CatalogPage() {
           const animateEntrance = lastNonPageKeyRef.current !== nonPageKey
           lastNonPageKeyRef.current = nonPageKey
           setData({
-            key: filterKey(page, genreIds, textFilters, sort, order),
+            key: searchParams.toString(),
             movies: result.items,
             total: result.total,
             animateEntrance,
@@ -186,7 +238,8 @@ function CatalogPage() {
     return () => {
       cancelled = true
     }
-  }, [page, genreIds, textFilters, sort, order])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams.toString()])
 
   function updateTextFilter<K extends keyof TextFilters>(field: K, value: TextFilters[K]) {
     setTextInput((current) => ({ ...current, [field]: value }))
@@ -195,39 +248,54 @@ function CatalogPage() {
   // Aplica um filtro de texto imediatamente, sem esperar o debounce de digitação: usado pelo
   // chip "X" (remove na hora) e pela seleção de diretor no autocomplete (confirma na hora).
   function setConfirmedTextFilter<K extends keyof TextFilters>(field: K, value: TextFilters[K]) {
-    setTextInput((current) => ({ ...current, [field]: value }))
-    setTextFilters((current) => ({ ...current, [field]: value }))
-    setPage(1)
+    const next = { ...textInput, [field]: value }
+    setTextInput(next)
+    setSearchParams(withTextFilters(searchParams, next), { replace: true })
   }
 
   function toggleGenre(genreId: string) {
-    setGenreIds((current) =>
-      current.includes(genreId) ? current.filter((id) => id !== genreId) : [...current, genreId],
-    )
-    setPage(1)
+    const next = new URLSearchParams(searchParams)
+    const current = readGenreIds(next)
+    next.delete('genre')
+    for (const id of current.includes(genreId) ? current.filter((id) => id !== genreId) : [...current, genreId]) {
+      next.append('genre', id)
+    }
+    next.delete('page')
+    setSearchParams(next, { replace: true })
   }
 
   function clearFilters() {
     setTextInput(EMPTY_TEXT_FILTERS)
-    setTextFilters(EMPTY_TEXT_FILTERS)
-    setGenreIds([])
-    setPage(1)
+    const next = withTextFilters(searchParams, EMPTY_TEXT_FILTERS)
+    next.delete('genre')
+    setSearchParams(next, { replace: true })
   }
 
   function changeSort(nextSort: MovieSort) {
-    setSort(nextSort)
-    setPage(1)
+    const next = new URLSearchParams(searchParams)
+    next.set('sort', nextSort)
+    next.delete('page')
+    setSearchParams(next, { replace: true })
   }
 
   function changeOrder(nextOrder: SortOrder) {
-    setOrder(nextOrder)
-    setPage(1)
+    const next = new URLSearchParams(searchParams)
+    next.set('order', nextOrder)
+    next.delete('page')
+    setSearchParams(next, { replace: true })
+  }
+
+  function changePage(nextPage: number) {
+    const next = new URLSearchParams(searchParams)
+    if (nextPage <= 1) next.delete('page')
+    else next.set('page', String(nextPage))
+    setSearchParams(next, { replace: true })
   }
 
   const hasActiveFilters =
     genreIds.length > 0 || Object.values(textInput).some((value) => value !== '')
 
-  // Baseado em textFilters (confirmado), não textInput (digitação em andamento),
+  // Baseado em textFilters (confirmado na URL), não textInput (digitação em andamento),
   // pra não piscar/mudar de contagem a cada letra digitada.
   const advancedFilterCount =
     (genreIds.length > 0 ? 1 : 0) +
@@ -235,9 +303,9 @@ function CatalogPage() {
     (textFilters.yearFrom !== '' || textFilters.yearTo !== '' ? 1 : 0) +
     (textFilters.ratingMin !== '' ? 1 : 0)
 
-  // Deriva o carregamento comparando os parâmetros já carregados com os atuais,
-  // em vez de resetar `data` sincronamente no efeito (sem re-render extra).
-  const currentKey = filterKey(page, genreIds, textFilters, sort, order)
+  // Deriva o carregamento comparando a URL já carregada com a atual, em vez de resetar `data`
+  // sincronamente no efeito (sem re-render extra).
+  const currentKey = searchParams.toString()
   const isLoading = data === null || data.key !== currentKey
   const movies = isLoading ? null : data.movies
   const totalPages = Math.max(1, Math.ceil((data?.total ?? 0) / PAGE_SIZE))
@@ -364,7 +432,7 @@ function CatalogPage() {
                   />
                 ))}
               </CatalogGrid>
-              <Pagination page={page} totalPages={totalPages} onPageChange={setPage} />
+              <Pagination page={page} totalPages={totalPages} onPageChange={changePage} />
             </>
           )}
         </div>
