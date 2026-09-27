@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from typing import Literal
 
-from sqlalchemy import func, select
+from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import aliased, selectinload
 
 from app.movies.cache import movie_cache
 from app.movies.models import (
@@ -45,6 +45,41 @@ class InvalidGenreError(ValueError):
     def __init__(self, genre_id: str) -> None:
         super().__init__(f"Gênero não encontrado: {genre_id}")
         self.genre_id = genre_id
+
+
+# "Votos imaginários" da média ponderada usada só para ordenar por nota (nunca para exibir):
+# quanto maior, mais avaliações um filme precisa ter para se destacar da média geral.
+BAYES_MIN_VOTES = 3
+
+
+def _bayesian_rating_score():
+    """Nota ponderada (bayesiana): (qtd × média + m × média_geral) / (qtd + m).
+
+    Sem isso, um filme com uma única avaliação nota 10 ordenaria acima de um com
+    centenas de avaliações nota 9 — a fórmula "puxa" filmes com poucas avaliações
+    para a média geral do catálogo, calculada na própria consulta SQL. Filmes sem
+    avaliação continuam com nota (e portanto score) NULL, pra seguir caindo por
+    último via `.nulls_last()`, como antes desta função existir.
+    """
+
+    # Alias: sem ele, a subquery da média geral compilaria correlacionada ao
+    # `dim_reviews` já presente no JOIN da consulta externa (mesma tabela, sem
+    # alias) em vez de agregar a tabela inteira uma única vez.
+    all_reviews = aliased(DimReview)
+    global_mean = (
+        select(
+            func.sum(all_reviews.nota_media_usuarios * all_reviews.qtd_avaliacoes_usuarios)
+            / func.sum(all_reviews.qtd_avaliacoes_usuarios)
+        )
+        .where(all_reviews.nota_media_usuarios.is_not(None))
+        .scalar_subquery()
+    )
+    qtd = func.coalesce(DimReview.qtd_avaliacoes_usuarios, 0)
+    media = DimReview.nota_media_usuarios
+    return case(
+        (qtd == 0, None),
+        else_=(qtd * media + BAYES_MIN_VOTES * global_mean) / (qtd + BAYES_MIN_VOTES),
+    )
 
 
 async def list_movies(
@@ -121,7 +156,7 @@ async def list_movies(
     sort_columns = {
         "title": DimMovie.titulo,
         "popularity": FactMoviePerformance.popularidade,
-        "rating": DimReview.nota_media_usuarios,
+        "rating": _bayesian_rating_score(),
         "recent": DimMovie.criado_em,
         "reviews_count": func.coalesce(DimReview.qtd_avaliacoes_usuarios, 0),
     }
