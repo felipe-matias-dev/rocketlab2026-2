@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Generic, TypeVar
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 T = TypeVar("T")
 
@@ -103,8 +103,10 @@ class MovieDetail(BaseModel):
 class MovieCreate(BaseModel):
     """Dados de entrada para cadastrar um filme.
 
-    `genre_ids` deve referenciar gêneros já existentes (GET /genres).
-    `diretor` é texto livre: busca ou cria a pessoa em dim_people.
+    `genre_ids` deve referenciar gêneros já existentes (GET /genres). `diretores`,
+    `atores`, `roteiristas` e `produtoras` são texto livre: cada nome busca ou cria a
+    pessoa/produtora correspondente (get-or-create case-insensitive, ver
+    `service.resolve_people`/`service.resolve_companies`).
     """
 
     titulo: str = Field(min_length=1)
@@ -116,7 +118,26 @@ class MovieCreate(BaseModel):
     url_poster: str | None = None
     url_backdrop: str | None = None
     genre_ids: list[str] = Field(default_factory=list)
-    diretor: str | None = None
+    diretores: list[str] = Field(default_factory=list)
+    atores: list[str] = Field(default_factory=list)
+    roteiristas: list[str] = Field(default_factory=list)
+    produtoras: list[str] = Field(default_factory=list)
+
+    @field_validator("diretores", "atores", "roteiristas", "produtoras")
+    @classmethod
+    def _sem_nome_duplicado_ou_vazio(cls, nomes: list[str]) -> list[str]:
+        vistos: set[str] = set()
+        limpos: list[str] = []
+        for nome in nomes:
+            nome_limpo = nome.strip()
+            if not nome_limpo:
+                continue
+            chave = nome_limpo.casefold()
+            if chave in vistos:
+                raise ValueError(f"Nome duplicado: {nome!r}")
+            vistos.add(chave)
+            limpos.append(nome_limpo)
+        return limpos
 
 
 class MovieUpdate(MovieCreate):

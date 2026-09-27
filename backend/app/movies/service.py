@@ -10,12 +10,14 @@ from sqlalchemy.orm import selectinload
 
 from app.movies.cache import movie_cache
 from app.movies.models import (
+    DimCompany,
     DimGenre,
     DimMovie,
     DimPerson,
     DimReview,
     FactMoviePerformance,
     MovieReview,
+    PersonType,
     bridge_movie_person,
     generate_surrogate_key,
 )
@@ -275,22 +277,88 @@ async def _get_genres_by_ids(session: AsyncSession, genre_ids: list[str]) -> lis
     return genres
 
 
-async def _get_or_create_director(session: AsyncSession, nome: str) -> DimPerson:
-    query = select(DimPerson).where(
-        DimPerson.nome_pessoa == nome, DimPerson.tipo_pessoa == "Diretor"
+async def resolve_people(
+    session: AsyncSession, nomes: list[str], tipo_pessoa: PersonType
+) -> list[DimPerson]:
+    """Get-or-create em lote, case-insensitive por nome_pessoa dentro do mesmo tipo_pessoa.
+
+    Preserva a ordem de `nomes`. Nomes duplicados entre si (case-insensitive) resolvem
+    para a mesma instância de DimPerson, evitando violar
+    UniqueConstraint(nome_pessoa, tipo_pessoa) com dois objetos "iguais" na mesma sessão.
+    `func.lower()` (built-in do SQLite) reduz os candidatos na query; a comparação final
+    usa `.casefold()` em Python, que é correto para acentos/unicode onde `lower()` do
+    SQLite não é confiável — aceitável aqui porque o volume por filme é pequeno.
+    """
+
+    if not nomes:
+        return []
+
+    lowered = [nome.casefold() for nome in nomes]
+    candidates = await session.scalars(
+        select(DimPerson).where(
+            DimPerson.tipo_pessoa == tipo_pessoa,
+            func.lower(DimPerson.nome_pessoa).in_(lowered),
+        )
     )
-    director = await session.scalar(query)
-    if director is None:
-        director = DimPerson(nome_pessoa=nome, tipo_pessoa="Diretor")
-        session.add(director)
-    return director
+    found = {person.nome_pessoa.casefold(): person for person in candidates}
+
+    resolved: dict[str, DimPerson] = {}
+    result: list[DimPerson] = []
+    for nome in nomes:
+        key = nome.casefold()
+        person = resolved.get(key) or found.get(key)
+        if person is None:
+            person = DimPerson(nome_pessoa=nome, tipo_pessoa=tipo_pessoa)
+            session.add(person)
+        resolved[key] = person
+        result.append(person)
+    return result
+
+
+async def resolve_companies(session: AsyncSession, nomes: list[str]) -> list[DimCompany]:
+    """Get-or-create em lote, case-insensitive por nome_produtora. Mesmo princípio de
+    `resolve_people`, sem `tipo_pessoa` (produtora não tem papel)."""
+
+    if not nomes:
+        return []
+
+    lowered = [nome.casefold() for nome in nomes]
+    candidates = await session.scalars(
+        select(DimCompany).where(func.lower(DimCompany.nome_produtora).in_(lowered))
+    )
+    found = {company.nome_produtora.casefold(): company for company in candidates}
+
+    resolved: dict[str, DimCompany] = {}
+    result: list[DimCompany] = []
+    for nome in nomes:
+        key = nome.casefold()
+        company = resolved.get(key) or found.get(key)
+        if company is None:
+            company = DimCompany(nome_produtora=nome)
+            session.add(company)
+        resolved[key] = company
+        result.append(company)
+    return result
+
+
+async def _resolve_full_cast(session: AsyncSession, data: MovieCreate) -> list[DimPerson]:
+    """Monta a lista de DimPerson (diretores + atores + roteiristas) para create/update,
+    resolvendo cada papel em lote via `resolve_people`."""
+
+    return [
+        *await resolve_people(session, data.diretores, "Diretor"),
+        *await resolve_people(session, data.atores, "Ator"),
+        *await resolve_people(session, data.roteiristas, "Roteirista"),
+    ]
 
 
 async def create_movie(session: AsyncSession, data: MovieCreate) -> MovieDetail:
-    """Cria um filme novo; genre_ids devem existir, diretor é get-or-create."""
+    """Cria um filme novo; genre_ids devem existir; diretores/atores/roteiristas e
+    produtoras são get-or-create case-insensitive."""
 
     genres = await _get_genres_by_ids(session, data.genre_ids) if data.genre_ids else []
-    people = [await _get_or_create_director(session, data.diretor)] if data.diretor else []
+    people = await _resolve_full_cast(session, data)
+    companies = await resolve_companies(session, data.produtoras)
 
     movie = DimMovie(
         id_filme=generate_surrogate_key(),
@@ -304,6 +372,7 @@ async def create_movie(session: AsyncSession, data: MovieCreate) -> MovieDetail:
         url_backdrop=data.url_backdrop,
         genres=genres,
         people=people,
+        companies=companies,
     )
     session.add(movie)
     await session.commit()
@@ -373,14 +442,19 @@ async def update_movie(
 ) -> MovieDetail | None:
     """Substitui os campos editáveis de um filme existente.
 
-    Gêneros são totalmente substituídos pelos novos `genre_ids`. Já o diretor
-    é tratado à parte: só o(s) DimPerson com tipo_pessoa='Diretor' associados
-    são trocados, preservando elenco/roteiristas já existentes em `people`.
+    Gêneros, elenco (diretores/atores/roteiristas) e produtoras são totalmente
+    substituídos pelos valores enviados — mesma semântica de substituição completa do
+    restante do PUT. Quem chama (o formulário) deve reenviar o elenco/produtoras atuais
+    junto com qualquer mudança, ou eles são removidos.
     """
 
     query = (
         select(DimMovie)
-        .options(selectinload(DimMovie.genres), selectinload(DimMovie.people))
+        .options(
+            selectinload(DimMovie.genres),
+            selectinload(DimMovie.people),
+            selectinload(DimMovie.companies),
+        )
         .where(DimMovie.sk_movie_id == sk_movie_id)
     )
     movie = await session.scalar(query)
@@ -397,11 +471,8 @@ async def update_movie(
     movie.url_backdrop = data.url_backdrop
 
     movie.genres = await _get_genres_by_ids(session, data.genre_ids) if data.genre_ids else []
-
-    for director in [person for person in movie.people if person.tipo_pessoa == "Diretor"]:
-        movie.people.remove(director)
-    if data.diretor:
-        movie.people.append(await _get_or_create_director(session, data.diretor))
+    movie.people = await _resolve_full_cast(session, data)
+    movie.companies = await resolve_companies(session, data.produtoras)
 
     await session.commit()
     movie_cache.invalidate()

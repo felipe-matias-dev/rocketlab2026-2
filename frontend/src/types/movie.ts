@@ -72,5 +72,8 @@ export interface MovieInput {
   url_poster: string | null
   url_backdrop: string | null
   genre_ids: string[]
-  diretor: string | null
+  diretores: string[]
+  atores: string[]
+  roteiristas: string[]
+  produtoras: string[]
 }

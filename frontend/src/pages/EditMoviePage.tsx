@@ -5,13 +5,14 @@ import { ApiError } from '../api/client'
 import { getMovie, updateMovie } from '../api/movies'
 import MovieForm from '../components/MovieForm'
 import { useToast } from '../components/Toast'
-import type { MovieDetail, MovieInput } from '../types/movie'
+import type { MovieDetail, MovieInput, Person } from '../types/movie'
 
 /** Converte a ficha completa no formato de entrada do MovieForm — sempre
  * com TODOS os campos, já que PUT /movies/{id} é substituição completa
- * (campo omitido vira null no backend). */
+ * (campo omitido vira lista vazia/null no backend). */
 function movieDetailToInput(movie: MovieDetail): MovieInput {
-  const diretor = movie.people.find((person) => person.tipo_pessoa === 'Diretor')
+  const porPapel = (papel: Person['tipo_pessoa']) =>
+    movie.people.filter((person) => person.tipo_pessoa === papel).map((person) => person.nome_pessoa)
   return {
     titulo: movie.titulo,
     data_lancamento: movie.data_lancamento,
@@ -22,7 +23,10 @@ function movieDetailToInput(movie: MovieDetail): MovieInput {
     url_poster: movie.url_poster,
     url_backdrop: movie.url_backdrop,
     genre_ids: movie.genres.map((genre) => genre.sk_genre_id),
-    diretor: diretor?.nome_pessoa ?? null,
+    diretores: porPapel('Diretor'),
+    atores: porPapel('Ator'),
+    roteiristas: porPapel('Roteirista'),
+    produtoras: movie.companies.map((company) => company.nome_produtora),
   }
 }
 

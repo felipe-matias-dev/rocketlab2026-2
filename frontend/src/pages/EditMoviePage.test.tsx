@@ -29,7 +29,7 @@ vi.mock('../components/MovieForm', () => ({
   }) => (
     <div>
       <p>{submitLabel}</p>
-      <p data-testid="diretor">{initialValues?.diretor ?? ''}</p>
+      <p data-testid="diretores">{(initialValues?.diretores ?? []).join(', ')}</p>
       <button
         onClick={async () => {
           const movie = await onSubmit({ ...initialValues, titulo: 'Duna (2021)' } as MovieInput)
@@ -112,12 +112,12 @@ describe('EditMoviePage', () => {
     expect(await screen.findByText('Erro interno')).toBeInTheDocument()
   })
 
-  it('extracts the director from the people list for the form', async () => {
+  it('extracts the directors from the people list for the form', async () => {
     mockedGetMovie.mockResolvedValue(detail)
 
     renderPage()
 
-    expect(await screen.findByTestId('diretor')).toHaveTextContent('Denis Villeneuve')
+    expect(await screen.findByTestId('diretores')).toHaveTextContent('Denis Villeneuve')
   })
 
   it('saves the movie via updateMovie for this movie id', async () => {

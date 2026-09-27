@@ -70,6 +70,10 @@ describe('MovieForm', () => {
     await screen.findByRole('button', { name: 'Ação' })
     fireEvent.click(screen.getByRole('button', { name: 'Ação' }))
 
+    const directorsInput = screen.getByLabelText('Diretores')
+    fireEvent.change(directorsInput, { target: { value: 'Denis Villeneuve' } })
+    fireEvent.keyDown(directorsInput, { key: 'Enter' })
+
     fireEvent.click(screen.getByRole('button', { name: 'Salvar' }))
 
     await waitFor(() =>
@@ -78,7 +82,10 @@ describe('MovieForm', () => {
           titulo: 'Duna',
           ano_lancamento: 2021,
           genre_ids: ['g1'],
-          diretor: null,
+          diretores: ['Denis Villeneuve'],
+          atores: [],
+          roteiristas: [],
+          produtoras: [],
           sinopse: null,
         }),
       ),

@@ -7,6 +7,7 @@ import { focusRingClass } from '../styles/interactive'
 import { pressableClass } from '../styles/motion'
 import type { Genre, MovieDetail, MovieInput } from '../types/movie'
 import { translateGenreName } from '../utils/genreLabels'
+import TagsInput from './TagsInput'
 
 const STATUS_OPTIONS = ['Planejado', 'Em Produção', 'Pós-Produção', 'Lançado']
 
@@ -89,7 +90,10 @@ interface MovieFormValues {
   url_poster: string
   url_backdrop: string
   genre_ids: string[]
-  diretor: string
+  diretores: string[]
+  atores: string[]
+  roteiristas: string[]
+  produtoras: string[]
 }
 
 const EMPTY_VALUES: MovieFormValues = {
@@ -102,7 +106,10 @@ const EMPTY_VALUES: MovieFormValues = {
   url_poster: '',
   url_backdrop: '',
   genre_ids: [],
-  diretor: '',
+  diretores: [],
+  atores: [],
+  roteiristas: [],
+  produtoras: [],
 }
 
 function toFormValues(input?: Partial<MovieInput>): MovieFormValues {
@@ -117,7 +124,10 @@ function toFormValues(input?: Partial<MovieInput>): MovieFormValues {
     url_poster: input.url_poster ?? '',
     url_backdrop: input.url_backdrop ?? '',
     genre_ids: input.genre_ids ?? [],
-    diretor: input.diretor ?? '',
+    diretores: input.diretores ?? [],
+    atores: input.atores ?? [],
+    roteiristas: input.roteiristas ?? [],
+    produtoras: input.produtoras ?? [],
   }
 }
 
@@ -132,7 +142,10 @@ function toMovieInput(values: MovieFormValues): MovieInput {
     url_poster: values.url_poster.trim() || null,
     url_backdrop: values.url_backdrop.trim() || null,
     genre_ids: values.genre_ids,
-    diretor: values.diretor.trim() || null,
+    diretores: values.diretores,
+    atores: values.atores,
+    roteiristas: values.roteiristas,
+    produtoras: values.produtoras,
   }
 }
 
@@ -280,16 +293,37 @@ function MovieForm({ initialValues, submitLabel, onSubmit, onSuccess }: MovieFor
           </div>
         </div>
 
-        <Field label="Diretor" htmlFor="diretor">
-          <input
-            id="diretor"
-            type="text"
-            maxLength={255}
-            value={values.diretor}
-            onChange={(event) => updateField('diretor', event.target.value)}
-            className={inputClass}
-          />
-        </Field>
+        <TagsInput
+          id="diretores"
+          label="Diretores"
+          values={values.diretores}
+          onChange={(diretores) => updateField('diretores', diretores)}
+          placeholder="Nome e Enter para adicionar"
+        />
+
+        <TagsInput
+          id="atores"
+          label="Elenco"
+          values={values.atores}
+          onChange={(atores) => updateField('atores', atores)}
+          placeholder="Nome e Enter para adicionar"
+        />
+
+        <TagsInput
+          id="roteiristas"
+          label="Roteiristas"
+          values={values.roteiristas}
+          onChange={(roteiristas) => updateField('roteiristas', roteiristas)}
+          placeholder="Nome e Enter para adicionar"
+        />
+
+        <TagsInput
+          id="produtoras"
+          label="Produtoras"
+          values={values.produtoras}
+          onChange={(produtoras) => updateField('produtoras', produtoras)}
+          placeholder="Nome e Enter para adicionar"
+        />
       </FormSection>
 
       <FormSection title="Detalhes de lançamento">
