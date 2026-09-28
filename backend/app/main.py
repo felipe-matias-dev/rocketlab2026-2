@@ -23,10 +23,30 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     await engine.dispose()
 
 
+OPENAPI_TAGS = [
+    {
+        "name": "movies",
+        "description": "Cadastro, catálogo paginado, busca, filtros e detalhe de filmes.",
+    },
+    {"name": "reviews", "description": "Avaliações (nota 0-10 + comentário) de um filme."},
+    {
+        "name": "genres",
+        "description": "Lista fixa de gêneros, usada em filtros e no formulário de cadastro.",
+    },
+    {"name": "directors", "description": "Autocomplete de diretores por prefixo."},
+    {"name": "dashboard", "description": "Analytics somente leitura sobre o catálogo inteiro."},
+]
+
+
 def create_app() -> FastAPI:
     app = FastAPI(
         title=settings.project_name,
         version=settings.project_version,
+        description=(
+            "Painel administrativo de um catálogo de filmes (RocketLab 2026.2). "
+            "Papel único de Administrador, sem autenticação; notas em escala 0-10."
+        ),
+        openapi_tags=OPENAPI_TAGS,
         lifespan=lifespan,
     )
 

@@ -9,7 +9,7 @@ from app.movies.service import MovieSort, SortOrder
 router = APIRouter()
 
 
-@router.get("", response_model=Paginated[MovieListItem])
+@router.get("", response_model=Paginated[MovieListItem], summary="Listar filmes")
 async def list_movies(
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
@@ -24,6 +24,7 @@ async def list_movies(
     order: SortOrder = Query("asc", description="Direção da ordenação"),
     db: AsyncSession = Depends(get_db),
 ) -> Paginated[MovieListItem]:
+    """Catálogo paginado, com busca por título, filtros e ordenação."""
     return await service.list_movies(
         db,
         page=page,
@@ -40,26 +41,48 @@ async def list_movies(
     )
 
 
-@router.get("/{sk_movie_id}", response_model=MovieDetail)
+@router.get(
+    "/{sk_movie_id}",
+    response_model=MovieDetail,
+    summary="Detalhar filme",
+    responses={404: {"description": "Filme não encontrado"}},
+)
 async def get_movie(sk_movie_id: str, db: AsyncSession = Depends(get_db)) -> MovieDetail:
+    """Metadados completos de um filme: elenco, produtoras, avaliações e bilheteria."""
     detail = await service.get_movie_detail(db, sk_movie_id)
     if detail is None:
         raise HTTPException(status_code=404, detail="Filme não encontrado")
     return detail
 
 
-@router.post("", response_model=MovieDetail, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=MovieDetail,
+    status_code=status.HTTP_201_CREATED,
+    summary="Cadastrar filme",
+    responses={400: {"description": "Um ou mais genre_ids não existem"}},
+)
 async def create_movie(payload: MovieCreate, db: AsyncSession = Depends(get_db)) -> MovieDetail:
+    """Cria um filme; diretores/atores/roteiristas/produtoras são resolvidos get-or-create."""
     try:
         return await service.create_movie(db, payload)
     except service.InvalidGenreError as error:
         raise HTTPException(status_code=400, detail=str(error)) from error
 
 
-@router.put("/{sk_movie_id}", response_model=MovieDetail)
+@router.put(
+    "/{sk_movie_id}",
+    response_model=MovieDetail,
+    summary="Atualizar filme",
+    responses={
+        400: {"description": "Um ou mais genre_ids não existem"},
+        404: {"description": "Filme não encontrado"},
+    },
+)
 async def update_movie(
     sk_movie_id: str, payload: MovieUpdate, db: AsyncSession = Depends(get_db)
 ) -> MovieDetail:
+    """Substitui os campos editáveis do filme, incluindo elenco/produtoras por completo."""
     try:
         updated = await service.update_movie(db, sk_movie_id, payload)
     except service.InvalidGenreError as error:
@@ -69,8 +92,14 @@ async def update_movie(
     return updated
 
 
-@router.delete("/{sk_movie_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    "/{sk_movie_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Remover filme",
+    responses={404: {"description": "Filme não encontrado"}},
+)
 async def delete_movie(sk_movie_id: str, db: AsyncSession = Depends(get_db)) -> None:
+    """Remove o filme; avaliações, vínculos e resumo de nota são removidos em cascata."""
     deleted = await service.delete_movie(db, sk_movie_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Filme não encontrado")
